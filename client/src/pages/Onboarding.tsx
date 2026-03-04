@@ -193,9 +193,11 @@ export default function Onboarding() {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">R$</span>
                   <input
                     type="number"
-                    value={meta}
-                    onChange={(e) => setMeta(Number(e.target.value))}
+                    value={meta || ''}
+                    onChange={(e) => setMeta(e.target.value === '' ? 0 : Number(e.target.value))}
+                    min="0"
                     className="w-full bg-accent/50 border-none rounded-2xl py-6 pl-12 pr-6 text-3xl font-bold focus:ring-2 ring-primary outline-none transition-all"
+                    placeholder="0"
                   />
                 </div>
               </div>
@@ -213,9 +215,11 @@ export default function Onboarding() {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">R$</span>
                   <input
                     type="number"
-                    value={patrimonio}
-                    onChange={(e) => setPatrimonio(Number(e.target.value))}
+                    value={patrimonio || ''}
+                    onChange={(e) => setPatrimonio(e.target.value === '' ? 0 : Number(e.target.value))}
+                    min="0"
                     className="w-full bg-accent/50 border-none rounded-2xl py-6 pl-12 pr-6 text-3xl font-bold focus:ring-2 ring-primary outline-none transition-all"
+                    placeholder="0"
                   />
                 </div>
               </div>
@@ -233,9 +237,11 @@ export default function Onboarding() {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">R$</span>
                   <input
                     type="number"
-                    value={aporte}
-                    onChange={(e) => setAporte(Number(e.target.value))}
+                    value={aporte || ''}
+                    onChange={(e) => setAporte(e.target.value === '' ? 0 : Number(e.target.value))}
+                    min="0"
                     className="w-full bg-accent/50 border-none rounded-2xl py-6 pl-12 pr-6 text-3xl font-bold focus:ring-2 ring-primary outline-none transition-all"
+                    placeholder="0"
                   />
                 </div>
               </div>
