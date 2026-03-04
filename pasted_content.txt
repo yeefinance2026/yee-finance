@@ -1,0 +1,250 @@
+Vou te passar a arquitetura completa do EVY Core V1, organizada em etapas claras, do jeito que um produto sério é fechado.
+
+Nada de improviso.
+Plano fechado → execução → refinamento.
+
+🎯 VISÃO DO PRODUTO (EVY CORE v1)
+
+O EVY não é uma calculadora.
+
+Ele é:
+
+Um painel psicológico de independência financeira medido em dias.
+
+A estrutura precisa refletir isso.
+
+🧠 ARQUITETURA FINAL DO V1
+1️⃣ Core (Motor financeiro)
+Arquivos:
+core/
+  freedomEngine.ts
+  projectionEngine.ts
+  types.ts (opcional, depois)
+
+O que cada um faz:
+freedomEngine
+
+Calcula:
+
+diasDeLiberdadeHoje
+
+rendaMensalAtual
+
+percentualProgresso
+
+anosDeLiberdadeHoje
+
+👉 É o estado atual.
+
+projectionEngine
+
+Simula ano a ano
+
+Retorna:
+
+anosAteIndependencia
+
+patrimonioNecessario
+
+timeline[]
+
+👉 É o futuro.
+
+✅ O motor já está funcionando.
+
+2️⃣ Estado Global (Cérebro)
+client/state/
+  FinancialContext.tsx
+  financial.types.ts
+
+
+Responsável por:
+
+Salvar patrimônio
+
+Salvar aporte
+
+Salvar custo de vida
+
+Salvar taxa
+
+Persistir no localStorage
+
+👉 Aqui está o único bug atual:
+O Simulator ainda não está salvando corretamente.
+
+3️⃣ Telas do Produto
+client/pages/
+  Home.tsx
+  Simulator.tsx
+  Projection.tsx (vamos criar)
+  History.tsx (placeholder)
+  Settings.tsx (placeholder)
+
+🏠 HOME (Painel psicológico)
+
+Mostra:
+
+Dias de liberdade (protagonista)
+
+Renda mensal atual
+
+% da independência
+
+CTA para Simulator
+
+Sem poluição visual.
+
+🧮 SIMULATOR (Entrada de dados)
+
+Objetivo:
+
+Atualizar FinancialContext
+
+Validar inputs
+
+Salvar estado
+
+Redirecionar para Home ou Projection
+
+Fluxo ideal:
+
+Usuário digita
+
+Clica Calcular
+
+Salva no contexto
+
+Redireciona para /
+
+📊 PROJECTION (Tela estratégica)
+
+Aqui está o diferencial.
+
+Ela deve mostrar:
+
+Patrimônio necessário
+
+Anos até independência
+
+Gráfico de crescimento
+
+Status:
+
+🔥 Já independente
+
+⏳ Faltam X anos
+
+❌ Nunca atinge
+
+Essa tela transforma o EVY em produto sério.
+
+🔥 PLANO DE EXECUÇÃO DETALHADO
+
+Agora vou dividir exatamente o que vamos fazer.
+
+🔹 ETAPA 1 — Conectar Simulator ao Contexto (30 minutos)
+
+Objetivo:
+
+Garantir que:
+
+setState()
+
+
+esteja sendo chamado no botão Calcular.
+
+Resultado esperado:
+
+STATE na Home deve mostrar valores preenchidos.
+
+🔹 ETAPA 2 — Validar motor com dados reais (15 minutos)
+
+Testar com:
+
+Patrimônio: 50.000
+
+Aporte: 1.000
+
+Despesa: 5.000
+
+Taxa: 4%
+
+Conferir:
+
+diasDeLiberdadeHoje faz sentido
+
+anosAteIndependencia faz sentido
+
+🔹 ETAPA 3 — Criar página Projection.tsx (1h)
+
+Estrutura inicial simples:
+
+/projection
+
+
+Mostrar:
+
+anosAteIndependencia
+
+patrimonioNecessario
+
+patrimônio no último ano simulado
+
+Sem gráfico ainda.
+Só estrutura funcional.
+
+🔹 ETAPA 4 — Criar gráfico simples (matplotlib mental → depois lib JS)
+
+Usar algo leve como:
+
+recharts
+ou
+
+chart.js
+
+Mostrar:
+
+Linha de crescimento ano a ano.
+
+🔹 ETAPA 5 — Melhorias estruturais finais
+
+Validar input
+
+Garantir tipos obrigatórios
+
+Evitar valores negativos
+
+Bloquear taxa absurda
+
+Ajustar arredondamento
+
+🔹 ETAPA 6 — Refinamento visual
+
+Só depois de tudo funcionando:
+
+Micro animação no número principal
+
+Transição suave entre telas
+
+Microcopy mais forte
+
+Ajuste tipográfico
+
+UX premium
+
+🧠 COMO UM PRODUTO FICA "TOP"
+
+Não é visual.
+
+É:
+
+Motor matemático sólido
+
+Estado previsível
+
+Fluxo simples
+
+Feedback claro
+
+Sem bugs
