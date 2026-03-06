@@ -16,16 +16,17 @@ export default function Landing() {
           Seu plano para viver de renda começa aqui.
         </h1>
         <p className="text-lg text-muted-foreground leading-relaxed">
-          Descubra quanto patrimônio você precisa,
-          quanto tempo falta para sua independência
-          e como acelerar sua liberdade financeira.
+          Seu plano para viver de renda começa aqui.
+          Descubra seu Número Dominante de Liberdade Financeira,
+          veja quanto tempo falta para sua independência e 
+          como acelerar sua jornada rumo à liberdade financeira.
           <br />
           <span className="font-semibold">Simples. Direto. Estratégico.</span>
         </p>
         <div className="pt-4">
           <Link href="/onboarding">
             <button className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
-              Começar meu plano de liberdade
+              Descobrir meu plano de liberdade
               <ArrowRight className="w-5 h-5" />
             </button>
           </Link>
@@ -123,7 +124,7 @@ export default function Landing() {
 
             <Link href="/onboarding">
               <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 transition-opacity">
-                Garantir minha vaga de fundador
+                Garantir preço vitalício
               </button>
             </Link>
           </CardContent>
