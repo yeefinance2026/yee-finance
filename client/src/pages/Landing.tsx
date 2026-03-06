@@ -16,9 +16,8 @@ export default function Landing() {
           Seu plano para viver de renda começa aqui.
         </h1>
         <p className="text-lg text-muted-foreground leading-relaxed">
-          Seu plano para viver de renda começa aqui.
           Descubra seu Número Dominante de Liberdade Financeira,
-          veja quanto tempo falta para sua independência e 
+          veja quanto tempo falta para sua independência e
           como acelerar sua jornada rumo à liberdade financeira.
           <br />
           <span className="font-semibold">Simples. Direto. Estratégico.</span>
