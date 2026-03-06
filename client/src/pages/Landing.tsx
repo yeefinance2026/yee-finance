@@ -70,6 +70,13 @@ export default function Landing() {
           </div>
         </div>
 
+        <p className="text-center text-muted-foreground mb-6 text-sm">
+          Comece grátis.
+          <span className="font-semibold">
+            {" "}E evolua para fundador quando quiser acelerar sua liberdade financeira.
+          </span>
+        </p>
+
         {/* Pricing Card */}
         <Card className="border-2 border-primary bg-primary/5 overflow-hidden">
           <div className="bg-primary text-primary-foreground py-2 text-center text-[10px] font-bold uppercase tracking-widest">
@@ -122,6 +129,10 @@ export default function Landing() {
           </CardContent>
         </Card>
       </main>
+
+      <p className="text-xs text-muted-foreground text-center mt-3">
+        🔒 Pagamento seguro • Cancele quando quiser
+      </p>
 
       <footer className="p-12 text-center text-muted-foreground text-xs space-y-4 max-w-md mx-auto">
         <p>© 2026 Yee Finance. Todos os direitos reservados.</p>
