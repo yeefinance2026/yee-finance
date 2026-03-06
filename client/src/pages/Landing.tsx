@@ -13,17 +13,19 @@ export default function Landing() {
           Yee Finance v1.0
         </div>
         <h1 className="text-5xl font-bold tracking-tighter leading-tight">
-          Construa sua liberdade financeira com clareza.
+          Seu plano para viver de renda começa aqui.
         </h1>
         <p className="text-lg text-muted-foreground leading-relaxed">
-          Transforme seus investimentos em um plano real de independência.
+          Descubra quanto patrimônio você precisa,
+          quanto tempo falta para sua independência
+          e como acelerar sua liberdade financeira.
           <br />
           <span className="font-semibold">Simples. Direto. Estratégico.</span>
         </p>
         <div className="pt-4">
           <Link href="/onboarding">
             <button className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
-              Começar meu plano agora
+              Começar meu plano de liberdade
               <ArrowRight className="w-5 h-5" />
             </button>
           </Link>
@@ -80,7 +82,7 @@ export default function Landing() {
                 <span className="text-muted-foreground line-through text-sm">De R$ 29,90</span>
               </div>
               <div className="flex items-center justify-center gap-1">
-                <span className="text-4xl font-bold text-primary">R$ 14,90</span>
+                <span className="text-4xl font-bold text-primary">R$ 9,90</span>
                 <span className="text-muted-foreground text-sm">/mês</span>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -100,7 +102,7 @@ export default function Landing() {
               </li>
               <li className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-primary" />
-                Acelerador completo
+                Acelerador Yee completo
               </li>
               <li className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-primary" />
@@ -114,7 +116,7 @@ export default function Landing() {
 
             <Link href="/onboarding">
               <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 transition-opacity">
-                Garantir minha vaga
+                Garantir minha vaga de fundador
               </button>
             </Link>
           </CardContent>
