@@ -10,22 +10,20 @@ export default function Landing() {
       <header className="px-6 pt-16 pb-12 text-center space-y-6 max-w-md mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest">
           <Zap className="w-3 h-3 fill-primary" />
-          Yee Finance v1.0
+          Yee Finance Beta
         </div>
         <h1 className="text-5xl font-bold tracking-tighter leading-tight">
           Seu plano para viver de renda começa aqui.
         </h1>
         <p className="text-lg text-muted-foreground leading-relaxed">
-          Descubra seu Número Dominante de Liberdade Financeira,
-          veja quanto tempo falta para sua independência e
-          como acelerar sua jornada rumo à liberdade financeira.
+          Descubra seu Número Dominante, veja quanto tempo falta para sua independência e como acelerar sua jornada rumo a viver de renda.
           <br />
           <span className="font-semibold">Simples. Direto. Estratégico.</span>
         </p>
         <div className="pt-4">
           <Link href="/onboarding">
             <button className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform">
-              Descobrir meu plano de liberdade
+              Começar meu plano de liberdade
               <ArrowRight className="w-5 h-5" />
             </button>
           </Link>
