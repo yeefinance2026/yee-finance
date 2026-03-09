@@ -144,10 +144,25 @@ export default function Home() {
     inv.dataAporte.startsWith(mesAtual)
   );
   const totalInvestidoMes = investimentosMes.reduce((acc, inv) => acc + inv.valor, 0);
-  const metaMes = aporteMensalSeguro;
+  const metaMesRaw = aporteMensalSeguro;
+  const metaMesMinima = Math.max(300, metaMesRaw); // Meta mínima de R$300
+  const metaMes = metaMesMinima;
   const progressoDesafio = metaMes > 0 ? (totalInvestidoMes / metaMes) * 100 : 0;
   const faltaParaDesafio = Math.max(0, metaMes - totalInvestidoMes);
   const desafioCompleto = totalInvestidoMes >= metaMes;
+
+  // Mensagem dinâmica do desafio
+  const getMensagemDesafio = (): string => {
+    if (desafioCompleto) {
+      return "Desafio completo! Continue assim!";
+    } else if (totalInvestidoMes === 0) {
+      return "Faça seu primeiro aporte do mês.";
+    } else if (progressoDesafio < 50) {
+      return `Você está a ${formatCurrency(faltaParaDesafio)} de completar!`;
+    } else {
+      return `Quase lá! Faltam ${formatCurrency(faltaParaDesafio)}`;
+    }
+  };
 
   // ========== ATUALIZAR PATRIMÔNIO ==========
   const handleAtualizarPatrimonio = async () => {
@@ -207,6 +222,7 @@ export default function Home() {
   };
 
   void forceUpdate;
+  void getMensagemDesafio;
 
   if (isLoading) {
     return (
@@ -282,7 +298,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 🔥 DESAFIO MENSAL DE APORTES */}
+        {/* 🔥 DESAFIO MENSAL DE APORTES - MELHORADO */}
         <Card className={`border-2 ${desafioCompleto ? 'border-green-500/30 bg-green-500/5' : 'border-primary/20 bg-primary/5'}`}>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
@@ -292,26 +308,24 @@ export default function Home() {
               </h3>
             </div>
 
-            {!desafioCompleto ? (
-              <>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm font-bold">
-                    <span>{formatCurrency(totalInvestidoMes)}</span>
-                    <span className="text-muted-foreground">{formatCurrency(metaMes)}</span>
-                  </div>
-                  <Progress value={Math.min(100, progressoDesafio)} className="h-3" />
-                </div>
-
-                <p className="text-sm font-bold text-primary">
-                  Você está a {formatCurrency(faltaParaDesafio)} de completar o desafio!
-                </p>
-              </>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-green-600">🎉 Desafio Completo!</p>
-                <p className="text-xs text-green-600/70">Você investiu {formatCurrency(totalInvestidoMes)} em {formatarMesAtual().split(' ')[0]}. Continue assim!</p>
+            {/* Sempre mostra progresso */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-bold">
+                <span>{formatCurrency(totalInvestidoMes)}</span>
+                <span className="text-muted-foreground">{formatCurrency(metaMes)}</span>
               </div>
-            )}
+              <Progress value={Math.min(100, progressoDesafio)} className="h-3" />
+            </div>
+
+            {/* Porcentagem e mensagem dinâmica */}
+            <div className="space-y-2">
+              <p className={`text-sm font-bold ${desafioCompleto ? 'text-green-600' : 'text-primary'}`}>
+                {Math.round(progressoDesafio)}% completo
+              </p>
+              <p className={`text-xs ${desafioCompleto ? 'text-green-600/70' : 'text-muted-foreground'}`}>
+                {getMensagemDesafio()}
+              </p>
+            </div>
           </CardContent>
         </Card>
 
