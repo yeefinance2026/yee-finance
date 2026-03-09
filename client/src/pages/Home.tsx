@@ -9,7 +9,9 @@ import {
   Zap,
   Lock,
   Trophy,
-  TrendingUp
+  TrendingUp,
+  Flame,
+  RefreshCw
 } from "lucide-react";
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
@@ -44,6 +46,12 @@ function getProximoMarco(progresso: number): number {
   return marcos.find(m => m > progresso) || 100;
 }
 
+// Formata mês em português
+function formatarMesAtual(): string {
+  const data = new Date();
+  return data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
 interface Plano {
   tipo: "free" | "fundador";
 }
@@ -56,6 +64,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [greeting, setGreeting] = useState({ greeting: "", emoji: "" });
   const [plano, setPlano] = useState<Plano>({ tipo: "free" });
+  const [patrimonioAnterior, setPatrimonioAnterior] = useState(0);
+  const [atualizandoPatrimonio, setAtualizandoPatrimonio] = useState(false);
 
   // Carrega dados do Supabase na inicialização
   useEffect(() => {
@@ -128,6 +138,51 @@ export default function Home() {
   const dataIndependencia = new Date();
   dataIndependencia.setMonth(dataIndependencia.getMonth() + Math.floor(mesesRestantes));
   const dataFormatada = dataIndependencia.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  // ========== DESAFIO MENSAL ==========
+  const investimentosMes = state.investimentos.filter(inv =>
+    inv.dataAporte.startsWith(mesAtual)
+  );
+  const totalInvestidoMes = investimentosMes.reduce((acc, inv) => acc + inv.valor, 0);
+  const metaMes = aporteMensalSeguro;
+  const progressoDesafio = metaMes > 0 ? (totalInvestidoMes / metaMes) * 100 : 0;
+  const faltaParaDesafio = Math.max(0, metaMes - totalInvestidoMes);
+  const desafioCompleto = totalInvestidoMes >= metaMes;
+
+  // ========== ATUALIZAR PATRIMÔNIO ==========
+  const handleAtualizarPatrimonio = async () => {
+    setAtualizandoPatrimonio(true);
+    
+    const crescimento = patrimonioBase - patrimonioAnterior;
+    const mesesAntigos = calcularMesesParaIndependencia(
+      patrimonioAnterior,
+      aporteMensalSeguro,
+      taxaAnualSegura / 100,
+      patrimonioNecessario
+    );
+    const mesesNovos = mesesRestantes;
+    const anosAdiantados = Math.floor((mesesAntigos - mesesNovos) / 12);
+    const mesesAdiantados = Math.floor((mesesAntigos - mesesNovos) % 12);
+
+    setTimeout(() => {
+      if (crescimento > 0) {
+        toast.success("🎉 Parabéns!", {
+          description: `Seu patrimônio cresceu ${formatCurrency(crescimento)} este mês.\nVocê adiantou sua liberdade em ${anosAdiantados > 0 ? `${anosAdiantados} anos` : ''} ${mesesAdiantados > 0 ? `e ${mesesAdiantados} meses` : ''}!`,
+        });
+      } else if (crescimento === 0) {
+        toast.info("Patrimônio sem alterações", {
+          description: "Continue investindo para acelerar sua jornada.",
+        });
+      } else {
+        toast.info("Patrimônio reduzido", {
+          description: "Revise seus investimentos.",
+        });
+      }
+      
+      setPatrimonioAnterior(patrimonioBase);
+      setAtualizandoPatrimonio(false);
+    }, 500);
+  };
 
   // Acelerador
   const valorAcelerador = aceleradorSelecionado === 'custom' ? aceleradorCustom : (aceleradorSelecionado as number);
@@ -227,6 +282,49 @@ export default function Home() {
           </div>
         </section>
 
+        {/* 🔥 DESAFIO MENSAL DE APORTES */}
+        <Card className={`border-2 ${desafioCompleto ? 'border-green-500/30 bg-green-500/5' : 'border-primary/20 bg-primary/5'}`}>
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Flame className={`w-5 h-5 ${desafioCompleto ? 'text-green-600 fill-green-600' : 'text-primary'}`} />
+              <h3 className={`text-sm font-bold uppercase tracking-widest ${desafioCompleto ? 'text-green-600' : 'text-primary'}`}>
+                Desafio de {formatarMesAtual().split(' ')[0].charAt(0).toUpperCase() + formatarMesAtual().split(' ')[0].slice(1)}
+              </h3>
+            </div>
+
+            {!desafioCompleto ? (
+              <>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm font-bold">
+                    <span>{formatCurrency(totalInvestidoMes)}</span>
+                    <span className="text-muted-foreground">{formatCurrency(metaMes)}</span>
+                  </div>
+                  <Progress value={Math.min(100, progressoDesafio)} className="h-3" />
+                </div>
+
+                <p className="text-sm font-bold text-primary">
+                  Você está a {formatCurrency(faltaParaDesafio)} de completar o desafio!
+                </p>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-green-600">🎉 Desafio Completo!</p>
+                <p className="text-xs text-green-600/70">Você investiu {formatCurrency(totalInvestidoMes)} em {formatarMesAtual().split(' ')[0]}. Continue assim!</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* BOTÃO ATUALIZAR PATRIMÔNIO */}
+        <button
+          onClick={handleAtualizarPatrimonio}
+          disabled={atualizandoPatrimonio}
+          className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`w-4 h-4 ${atualizandoPatrimonio ? 'animate-spin' : ''}`} />
+          Atualizar Patrimônio do Mês
+        </button>
+
         {/* RENDA PASSIVA - SIMPLIFICADO */}
         <Card className="border border-border bg-card">
           <CardContent className="p-6 space-y-4">
@@ -271,7 +369,8 @@ export default function Home() {
             </div>
 
             <div className="pt-3 border-t border-border/50">
-              <p className="text-[10px] text-muted-foreground italic">
+              <Progress value={progressoPatrimonio} className="h-2 mb-2" />
+              <p className="text-xs text-muted-foreground italic">
                 Simulação baseada em rendimento médio de 0,6% ao mês.
               </p>
             </div>
@@ -324,10 +423,15 @@ export default function Home() {
                 +R$ 200
               </button>
               <button
-                onClick={() => { setAceleradorSelecionado(500 as number | 'custom'); setAceleradorCustom(0); }}
-                className={`py-2 px-3 rounded-lg font-bold text-sm transition-all ${aceleradorSelecionado === 500 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'}`}
+                onClick={() => plano.tipo === "fundador" ? (setAceleradorSelecionado(500 as number | 'custom'), setAceleradorCustom(0)) : toast.info("Disponível no plano Fundador")}
+                className={`py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-1 relative ${
+                  plano.tipo === "free"
+                    ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 cursor-not-allowed'
+                    : aceleradorSelecionado === 500 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'
+                }`}
               >
                 +R$ 500
+                {plano.tipo === "free" && <Lock className="w-3 h-3" />}
               </button>
             </div>
 

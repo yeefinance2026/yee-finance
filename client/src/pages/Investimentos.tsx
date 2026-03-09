@@ -9,9 +9,13 @@ import {
   Trash2,
   Landmark,
   BarChart2,
+  Lock,
+  TrendingUp,
+  PieChart,
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +38,8 @@ import { TipoRendimento } from "@/state/financial.types";
 
 const CATEGORIAS_JUROS = ["CDB", "Tesouro Direto", "LCI/LCA", "Debêntures", "Poupança", "Outros RF"];
 const CATEGORIAS_DIVIDENDO = ["Ações", "FIIs", "ETFs", "BDRs", "Outros RV"];
+
+const LIMITE_FREE = 5; // Limite de investimentos para FREE
 
 export default function Investimentos() {
   const {
@@ -77,6 +83,13 @@ export default function Investimentos() {
   };
 
   const handleAdd = async () => {
+    if (state.investimentos.length >= LIMITE_FREE) {
+      toast.error("Limite de investimentos atingido", {
+        description: "Upgrade para Fundador para adicionar mais ativos.",
+      });
+      return;
+    }
+
     if (!nome || !valor) return;
 
     await adicionarInvestimento({
@@ -99,9 +112,23 @@ export default function Investimentos() {
     removerInvestimento(id);
   };
 
+  const handlePremiumFeature = () => {
+    toast.info("Disponível no plano Fundador", {
+      description: "Desbloqueie análises avançadas e projeções.",
+    });
+  };
+
   const investimentosJurosList = state.investimentos.filter(inv => inv.tipoRendimento === "juros");
   const investimentosDividendoList = state.investimentos.filter(inv => inv.tipoRendimento === "dividendo" || !inv.tipoRendimento);
   const totalAtivos = state.investimentos.length;
+
+  // Premium Features
+  const totalRendaVariavel = investimentosDividendoList.reduce((acc, inv) => acc + inv.valor, 0);
+  const totalRendaFixa = investimentosJurosList.reduce((acc, inv) => acc + inv.valor, 0);
+  const percentualRV = totalInvestido > 0 ? ((totalRendaVariavel / totalInvestido) * 100).toFixed(1) : 0;
+  const percentualRF = totalInvestido > 0 ? ((totalRendaFixa / totalInvestido) * 100).toFixed(1) : 0;
+
+  const botaoAddDisabled = state.investimentos.length >= LIMITE_FREE;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -117,7 +144,14 @@ export default function Investimentos() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
-            <button className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary/20">
+            <button 
+              disabled={botaoAddDisabled}
+              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${
+                botaoAddDisabled 
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50' 
+                  : 'bg-primary text-primary-foreground shadow-primary/20 hover:shadow-primary/30'
+              }`}
+            >
               <Plus className="w-4 h-4" />
               Adicionar
             </button>
@@ -218,7 +252,7 @@ export default function Investimentos() {
       </header>
 
       <main className="px-6 space-y-6 max-w-md mx-auto">
-        {/* 1️⃣ CAPITAL ACUMULADO */}
+        {/* 1️⃣ CAPITAL ACUMULADO - FREE */}
         <Card className="border-none bg-primary/10">
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -229,7 +263,7 @@ export default function Investimentos() {
             <h2 className="text-4xl font-bold tracking-tight">{formatCurrency(totalInvestido)}</h2>
             
             <p className="text-sm text-muted-foreground font-medium">
-              {totalAtivos} {totalAtivos === 1 ? "ativo" : "ativos"} investidos
+              {totalAtivos}/{LIMITE_FREE} {totalAtivos === 1 ? "ativo" : "ativos"} (FREE)
             </p>
 
             <div className="pt-3 border-t border-border/50 space-y-2">
@@ -244,7 +278,22 @@ export default function Investimentos() {
           </CardContent>
         </Card>
 
-        {/* 2️⃣ RENDA PASSIVA ESTIMADA */}
+        {/* AVISO DE LIMITE */}
+        {totalAtivos >= LIMITE_FREE && (
+          <Card className="border border-yellow-500/30 bg-yellow-500/5">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-start gap-2">
+                <Lock className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-yellow-600">Limite de investimentos atingido</p>
+                  <p className="text-[10px] text-yellow-600/70">Upgrade para Fundador para adicionar mais ativos</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 2️⃣ RENDA PASSIVA ESTIMADA - FREE */}
         <Card className="border border-border bg-card">
           <CardContent className="p-6 space-y-3">
             <span className="text-xs font-bold uppercase tracking-wider text-primary">Renda Passiva Estimada</span>
@@ -259,7 +308,7 @@ export default function Investimentos() {
           </CardContent>
         </Card>
 
-        {/* 3️⃣ RENDA VARIÁVEL */}
+        {/* 3️⃣ RENDA VARIÁVEL - FREE */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <BarChart2 className="w-4 h-4 text-primary" />
@@ -315,7 +364,7 @@ export default function Investimentos() {
           </div>
         </div>
 
-        {/* 4️⃣ RENDA FIXA */}
+        {/* 4️⃣ RENDA FIXA - FREE */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Landmark className="w-4 h-4 text-primary" />
@@ -370,6 +419,80 @@ export default function Investimentos() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* 🟡 PREMIUM FEATURES */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Lock className="w-4 h-4 text-yellow-600" />
+            Análises Avançadas
+          </h3>
+
+          {/* Diversificação */}
+          <button
+            onClick={handlePremiumFeature}
+            className="w-full"
+          >
+            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PieChart className="w-4 h-4 text-yellow-600" />
+                    <span className="text-xs font-bold uppercase text-yellow-600">Diversificação da Carteira</span>
+                  </div>
+                  <Lock className="w-4 h-4 text-yellow-600" />
+                </div>
+                <div className="space-y-2 text-left">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Renda Variável</span>
+                    <span className="font-bold">{percentualRV}%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Renda Fixa</span>
+                    <span className="font-bold">{percentualRF}%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </button>
+
+          {/* Evolução */}
+          <button
+            onClick={handlePremiumFeature}
+            className="w-full"
+          >
+            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-yellow-600" />
+                    <span className="text-xs font-bold uppercase text-yellow-600">Evolução do Patrimônio</span>
+                  </div>
+                  <Lock className="w-4 h-4 text-yellow-600" />
+                </div>
+                <p className="text-[10px] text-muted-foreground">Gráfico de crescimento mensal</p>
+              </CardContent>
+            </Card>
+          </button>
+
+          {/* Projeção */}
+          <button
+            onClick={handlePremiumFeature}
+            className="w-full"
+          >
+            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BarChart2 className="w-4 h-4 text-yellow-600" />
+                    <span className="text-xs font-bold uppercase text-yellow-600">Projeção de Renda Futura</span>
+                  </div>
+                  <Lock className="w-4 h-4 text-yellow-600" />
+                </div>
+                <p className="text-[10px] text-muted-foreground">Simule seu crescimento em 5 anos</p>
+              </CardContent>
+            </Card>
+          </button>
         </div>
       </main>
     </div>

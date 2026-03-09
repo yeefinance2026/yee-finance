@@ -11,8 +11,8 @@ import {
   BarChart2,
   Calendar,
   ChevronRight,
-  TrendingUp,
-  Info
+  Lock,
+  Zap,
 } from "lucide-react";
 import { 
   Dialog, 
@@ -32,12 +32,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 export default function Dividendos() {
   const { state, adicionarDividendo, removerDividendo } = useFinancial();
@@ -140,6 +135,12 @@ export default function Dividendos() {
     setIsAddOpen(false);
   };
 
+  const handlePremiumFeature = () => {
+    toast.info("Disponível no plano Fundador", {
+      description: "Desbloqueie análises avançadas e projeções.",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <header className="p-6 flex justify-between items-center">
@@ -211,71 +212,86 @@ export default function Dividendos() {
           </div>
         </div>
 
-        {/* 1️⃣ RENDA MÉDIA MENSAL */}
-        <Card className="border border-border bg-card">
-          <CardContent className="p-6 space-y-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Renda Média Mensal</p>
-            <h2 className="text-4xl font-bold text-primary">≈ {formatCurrency(rendaPassivaMediaTotal)}</h2>
-            <p className="text-[10px] text-muted-foreground italic">
-              Baseado nos dividendos e juros recebidos.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* 2️⃣ COBERTURA DA LIBERDADE */}
-        <Card className="border-none bg-primary/10 overflow-hidden relative">
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cobertura da Liberdade</p>
-              <h2 className="text-5xl font-bold text-primary">{progresso.toFixed(1)}%</h2>
-              <p className="text-sm text-muted-foreground">da sua meta de {formatCurrency(metaMensal)}</p>
-            </div>
-            
-            <div className="space-y-2">
-              <Progress value={progresso} className="h-2 bg-primary/20" />
-              <div className="flex justify-between text-xs font-bold text-muted-foreground">
-                <span>{formatCurrency(rendaPassivaMediaTotal)}</span>
-                <span>{formatCurrency(metaMensal)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 3️⃣ RESUMO DO MÊS SELECIONADO */}
+        {/* 🟢 FREE: RECEBIDO NO MÊS */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             {formatarMesAno(mesVisualizacao)}
           </h3>
           
-          <div className="space-y-3">
-            <Card className="border border-border bg-card">
-              <CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Recebido no mês</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalDividendosMesSelecionado)}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border bg-card">
-              <CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Estimativa Renda Fixa</p>
-                <p className="text-2xl font-bold text-primary">≈ {formatCurrency(rendaJurosMensal)}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">Valor estimado com base nos investimentos atuais.</p>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="border border-border bg-card">
+            <CardContent className="p-6">
+              <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Recebido no mês</p>
+              <p className="text-4xl font-bold">{formatCurrency(totalDividendosMesSelecionado)}</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* 4️⃣ TOTAL DE DIVIDENDOS NO ANO */}
+        {/* 🟢 FREE: TOTAL NO ANO */}
         {totalDividendosAnoAtual > 0 && (
-          <Card className="border-2 border-yellow-500/30 bg-yellow-500/5">
+          <Card className="border-2 border-green-500/30 bg-green-500/5">
             <CardContent className="p-6 text-center space-y-2">
-              <p className="text-xs font-bold uppercase text-yellow-600">Dividendos recebidos em {anoAtual}</p>
-              <p className="text-3xl font-bold text-yellow-600">{formatCurrency(totalDividendosAnoAtual)}</p>
+              <p className="text-xs font-bold uppercase text-green-600">Dividendos recebidos em {anoAtual}</p>
+              <p className="text-3xl font-bold text-green-600">{formatCurrency(totalDividendosAnoAtual)}</p>
             </CardContent>
           </Card>
         )}
 
-        {/* 5️⃣ HISTÓRICO DE DIVIDENDOS */}
+        {/* 🟡 FUNDADOR: RENDA MÉDIA MENSAL */}
+        <button onClick={handlePremiumFeature} className="w-full">
+          <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+            <CardContent className="p-6 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-widest text-yellow-600">Renda Média Mensal</p>
+                <Lock className="w-4 h-4 text-yellow-600" />
+              </div>
+              <h2 className="text-4xl font-bold text-yellow-600">≈ {formatCurrency(rendaPassivaMediaTotal)}</h2>
+              <p className="text-[10px] text-yellow-600/70 italic">
+                Baseado nos dividendos e juros recebidos.
+              </p>
+            </CardContent>
+          </Card>
+        </button>
+
+        {/* 🟡 FUNDADOR: COBERTURA DA LIBERDADE */}
+        <button onClick={handlePremiumFeature} className="w-full">
+          <Card className="border-none bg-yellow-500/5 overflow-hidden relative">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-widest text-yellow-600">Cobertura da Liberdade</p>
+                <Lock className="w-4 h-4 text-yellow-600" />
+              </div>
+
+              <div className="space-y-1">
+                <h2 className="text-5xl font-bold text-yellow-600">{progresso.toFixed(1)}%</h2>
+                <p className="text-sm text-yellow-600/70">da sua meta de {formatCurrency(metaMensal)}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Progress value={progresso} className="h-2 bg-yellow-500/20" />
+                <div className="flex justify-between text-xs font-bold text-yellow-600/70">
+                  <span>{formatCurrency(rendaPassivaMediaTotal)}</span>
+                  <span>{formatCurrency(metaMensal)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </button>
+
+        {/* 🟡 FUNDADOR: ESTIMATIVA RENDA FIXA */}
+        <button onClick={handlePremiumFeature} className="w-full">
+          <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+            <CardContent className="p-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-widest text-yellow-600">Estimativa Renda Fixa</p>
+                <Lock className="w-4 h-4 text-yellow-600" />
+              </div>
+              <p className="text-3xl font-bold text-yellow-600">≈ {formatCurrency(rendaJurosMensal)}</p>
+              <p className="text-[10px] text-yellow-600/70">Valor estimado com base nos investimentos atuais.</p>
+            </CardContent>
+          </Card>
+        </button>
+
+        {/* 🟢 FREE: HISTÓRICO DE DIVIDENDOS */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Dividendos</h3>
           
