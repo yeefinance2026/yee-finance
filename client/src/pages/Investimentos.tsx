@@ -56,6 +56,7 @@ export default function Investimentos() {
 
   const totalInvestido = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
   const metaMensal = state.numeroLiberdade;
+  const patrimonioNecessario = metaMensal > 0 ? metaMensal / 0.006 : 0;
 
   const investimentosJuros = state.investimentos.filter(inv => inv.tipoRendimento === "juros");
   const rendaJuros = investimentosJuros.reduce((acc, inv) => acc + (inv.valor * (inv.taxaAnual / 100)) / 12, 0);
@@ -65,7 +66,6 @@ export default function Investimentos() {
   const totalDividendosMes = dividendosMesAtual.reduce((acc, d) => acc + d.valor, 0);
 
   const rendaPassivaTotal = rendaJuros + totalDividendosMes;
-  const progresso = metaMensal > 0 ? Math.min(100, (rendaPassivaTotal / metaMensal) * 100) : 0;
 
   const handleTipoChange = (tipo: TipoRendimento) => {
     setTipoAtivo(tipo);
@@ -80,7 +80,7 @@ export default function Investimentos() {
     if (!nome || !valor) return;
 
     await adicionarInvestimento({
-      id: Math.random().toString(36).substr(2, 9), // Adicionado ID tempor favorável
+      id: Math.random().toString(36).substr(2, 9),
       nome,
       valor: Number(valor),
       categoria,
@@ -95,13 +95,13 @@ export default function Investimentos() {
     setIsAddOpen(false);
   };
 
-
   const handleDelete = (id: string) => {
     removerInvestimento(id);
   };
 
   const investimentosJurosList = state.investimentos.filter(inv => inv.tipoRendimento === "juros");
   const investimentosDividendoList = state.investimentos.filter(inv => inv.tipoRendimento === "dividendo" || !inv.tipoRendimento);
+  const totalAtivos = state.investimentos.length;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -112,7 +112,7 @@ export default function Investimentos() {
               <ChevronLeft className="w-6 h-6" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold">Aportes</h1>
+          <h1 className="text-xl font-bold">Investimentos</h1>
         </div>
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -217,59 +217,87 @@ export default function Investimentos() {
         </Dialog>
       </header>
 
-      <main className="px-6 space-y-8 max-w-md mx-auto">
+      <main className="px-6 space-y-6 max-w-md mx-auto">
+        {/* 1️⃣ CAPITAL ACUMULADO */}
         <Card className="border-none bg-primary/10">
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Wallet className="w-4 h-4" />
               <span className="text-xs font-bold uppercase tracking-wider">Capital Acumulado</span>
             </div>
-            <div className="space-y-1">
-              <h2 className="text-4xl font-bold tracking-tight text-foreground">{formatCurrency(totalInvestido)}</h2>
-              <p className="text-sm text-muted-foreground font-medium">
-                {progresso.toFixed(1)}% da meta de liberdade
-              </p>
-            </div>
-            <Progress value={progresso} className="h-2" />
-            <div className="pt-2 border-t border-border/50">
-              <p className="text-[10px] font-bold uppercase text-muted-foreground">Renda Passiva Consolidada (Mês)</p>
-              <p className="text-sm font-bold text-primary">{formatCurrency(rendaPassivaTotal)}/mês</p>
+            
+            <h2 className="text-4xl font-bold tracking-tight">{formatCurrency(totalInvestido)}</h2>
+            
+            <p className="text-sm text-muted-foreground font-medium">
+              {totalAtivos} {totalAtivos === 1 ? "ativo" : "ativos"} investidos
+            </p>
+
+            <div className="pt-3 border-t border-border/50 space-y-2">
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">Progresso da meta</p>
+              <div className="space-y-1">
+                <Progress value={Math.min(100, (totalInvestido / patrimonioNecessario) * 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {formatCurrency(totalInvestido)} / {formatCurrency(patrimonioNecessario)}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Seção: Renda Variável (Dividendos) */}
+        {/* 2️⃣ RENDA PASSIVA ESTIMADA */}
+        <Card className="border border-border bg-card">
+          <CardContent className="p-6 space-y-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Renda Passiva Estimada</span>
+            
+            <h3 className="text-3xl font-bold text-primary">
+              ≈ {formatCurrency(rendaPassivaTotal)}/mês
+            </h3>
+
+            <p className="text-[10px] text-muted-foreground italic">
+              Estimativa baseada no rendimento médio dos ativos.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* 3️⃣ RENDA VARIÁVEL */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Renda Variável</h3>
-            </div>
-            <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded-lg">{investimentosDividendoList.length} ativos</span>
+          <div className="flex items-center gap-2">
+            <BarChart2 className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Renda Variável</h3>
+            <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded-lg ml-auto">
+              {investimentosDividendoList.length} {investimentosDividendoList.length === 1 ? "ativo" : "ativos"}
+            </span>
           </div>
-          <p className="text-[10px] text-muted-foreground -mt-2">Ações, FIIs, ETFs — dividendos lançados manualmente</p>
+
+          {investimentosDividendoList.length > 0 && (
+            <p className="text-xs text-muted-foreground -mt-2">
+              {formatCurrency(investimentosDividendoList.reduce((acc, inv) => acc + inv.valor, 0))} investidos
+            </p>
+          )}
 
           <div className="space-y-3">
             {investimentosDividendoList.map((inv) => (
-              <Card key={inv.id} className="border border-border bg-card hover:bg-accent/20 transition-colors group">
+              <Card key={inv.id} className="border border-border bg-card hover:bg-accent/20 transition-colors">
                 <CardContent className="p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <BarChart2 className="w-5 h-5 text-primary" />
                     </div>
-                    <div>
-                      <p className="font-bold text-sm">{inv.nome}</p>
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{inv.categoria}</p>
-                      <p className="text-[10px] text-muted-foreground">{new Date(inv.dataAporte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm truncate">{inv.nome}</p>
+                      <p className="text-[10px] text-muted-foreground">{inv.categoria}</p>
                     </div>
                   </div>
-                  <div className="text-right flex items-center gap-4">
-                    <div>
+                  <div className="text-right flex items-center gap-3">
+                    <div className="text-right">
                       <p className="font-bold text-sm">{formatCurrency(inv.valor)}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(inv.dataAporte + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </p>
                     </div>
                     <button
                       onClick={() => handleDelete(inv.id)}
-                      className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                      className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all flex-shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -287,40 +315,46 @@ export default function Investimentos() {
           </div>
         </div>
 
-        {/* Seção: Renda Fixa (Juros) */}
+        {/* 4️⃣ RENDA FIXA */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Landmark className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Renda Fixa</h3>
-            </div>
-            <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded-lg">{investimentosJurosList.length} ativos</span>
+          <div className="flex items-center gap-2">
+            <Landmark className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Renda Fixa</h3>
+            <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded-lg ml-auto">
+              {investimentosJurosList.length} {investimentosJurosList.length === 1 ? "ativo" : "ativos"}
+            </span>
           </div>
-          <p className="text-[10px] text-muted-foreground -mt-2">CDB, Tesouro, LCI — renda calculada pela taxa anual</p>
+
+          {investimentosJurosList.length > 0 && (
+            <p className="text-xs text-muted-foreground -mt-2">
+              {formatCurrency(investimentosJurosList.reduce((acc, inv) => acc + inv.valor, 0))} investidos
+            </p>
+          )}
 
           <div className="space-y-3">
             {investimentosJurosList.map((inv) => (
-              <Card key={inv.id} className="border border-border bg-card hover:bg-accent/20 transition-colors group">
+              <Card key={inv.id} className="border border-border bg-card hover:bg-accent/20 transition-colors">
                 <CardContent className="p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Landmark className="w-5 h-5 text-primary" />
                     </div>
-                    <div>
-                      <p className="font-bold text-sm">{inv.nome}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm truncate">{inv.nome}</p>
                       <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{inv.categoria}</p>
-                      <p className="text-[10px] text-muted-foreground">{new Date(inv.dataAporte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>
-                  <div className="text-right flex items-center gap-4">
-                    <div>
+                  <div className="text-right flex items-center gap-3">
+                    <div className="text-right">
                       <p className="font-bold text-sm">{formatCurrency(inv.valor)}</p>
                       <p className="text-[10px] font-bold text-primary">{inv.taxaAnual}% a.a.</p>
-                      <p className="text-[10px] text-muted-foreground">{formatCurrency((inv.valor * (inv.taxaAnual / 100)) / 12)}/mês</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        ≈ {formatCurrency((inv.valor * (inv.taxaAnual / 100)) / 12)}/mês
+                      </p>
                     </div>
                     <button
                       onClick={() => handleDelete(inv.id)}
-                      className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                      className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all flex-shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

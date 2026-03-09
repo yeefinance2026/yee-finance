@@ -4,12 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   Calendar,
-  ArrowRight,
   Settings,
   PieChart,
-  BarChart2,
   Zap,
-  Target,
   Lock,
   Trophy,
   TrendingUp
@@ -41,6 +38,12 @@ function getMensagemMotivacional(progresso: number): string {
   return "Sua jornada começa hoje.";
 }
 
+// Calcula o próximo marco
+function getProximoMarco(progresso: number): number {
+  const marcos = [5, 10, 25, 50, 75, 100];
+  return marcos.find(m => m > progresso) || 100;
+}
+
 interface Plano {
   tipo: "free" | "fundador";
 }
@@ -53,8 +56,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [greeting, setGreeting] = useState({ greeting: "", emoji: "" });
   const [plano, setPlano] = useState<Plano>({ tipo: "free" });
-  const [showAtualizarPatrimonio, setShowAtualizarPatrimonio] = useState(false);
-  const [patrimonioAtualizado, setPatrimonioAtualizado] = useState("");
 
   // Carrega dados do Supabase na inicialização
   useEffect(() => {
@@ -99,8 +100,8 @@ export default function Home() {
   const rendaPassivaAtual = rendaJuros + totalDividendosMes;
 
   const progresso = metaMensal > 0 ? Math.min(100, (rendaPassivaAtual / metaMensal) * 100) : 0;
-  const faltaMensal = Math.max(0, metaMensal - rendaPassivaAtual);
   const progressoRestante = 100 - progresso;
+  const proximoMarco = getProximoMarco(progresso);
 
   // Patrimônio
   const patrimonioBase = (state.patrimonioAtual && state.patrimonioAtual > 0)
@@ -145,16 +146,9 @@ export default function Home() {
   dataComAcelerador.setMonth(dataComAcelerador.getMonth() + Math.floor(mesesComAcelerador));
   const dataAceleradorFormatada = dataComAcelerador.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-  const handleAtualizarPatrimonio = () => {
-    if (!patrimonioAtualizado) {
-      toast.error("Digite um valor para atualizar");
-      return;
-    }
-    const valor = Number(patrimonioAtualizado);
-    const novoPatrimonio = patrimonioBase + valor;
-    toast.success(`🎉 Atualização concluída!\nSeu patrimônio subiu de ${formatCurrency(patrimonioBase)} para ${formatCurrency(novoPatrimonio)}`);
-    setPatrimonioAtualizado("");
-    setShowAtualizarPatrimonio(false);
+  // Formata valores sem centavos quando apropriado
+  const formatarPatrimonio = (valor: number) => {
+    return Math.round(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
   };
 
   void forceUpdate;
@@ -195,44 +189,58 @@ export default function Home() {
           </p>
         </section>
 
-        {/* NÚMERO DOMINANTE COM GAMIFICAÇÃO */}
-        <section className="text-center space-y-4 py-6">
-          <div className="space-y-2">
+        {/* NÚMERO DOMINANTE - SEM DUPLICAÇÃO */}
+        <section className="text-center space-y-4 py-4">
+          <div className="space-y-1">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Número Dominante</p>
             <h2 className="text-6xl font-bold tracking-tighter text-primary">
-              {progresso.toFixed(0)}%
+              {progresso.toFixed(1)}%
             </h2>
             <p className="text-muted-foreground font-bold text-lg">
               {getMensagemMotivacional(progresso)}
             </p>
           </div>
 
-          {/* Progresso tangível */}
-          <div className="bg-accent/30 rounded-2xl p-4 space-y-2">
-            <div className="flex justify-between text-sm font-bold">
-              <span className="text-primary">{progresso.toFixed(1)}% conquistado</span>
-              <span className="text-muted-foreground">{progressoRestante.toFixed(1)}% restante</span>
+          {/* Progresso sem duplicação */}
+          <div className="bg-accent/30 rounded-2xl p-4 space-y-3">
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm font-bold">
+                <span className="text-primary">{progresso.toFixed(1)}% conquistado</span>
+                <span className="text-muted-foreground">{progressoRestante.toFixed(1)}% restante</span>
+              </div>
+              <Progress value={progresso} className="h-3" />
             </div>
-            <Progress value={progresso} className="h-3" />
-            <p className="text-xs text-muted-foreground pt-2">
+
+            <p className="text-xs text-muted-foreground">
               {formatCurrency(rendaPassivaAtual)} / {formatCurrency(metaMensal)} de renda passiva
+            </p>
+
+            <div className="pt-2 border-t border-border/50">
+              <p className="text-xs font-bold text-primary">
+                Próximo marco: {proximoMarco}% da liberdade financeira
+              </p>
+            </div>
+
+            <p className="text-xs text-muted-foreground italic">
+              Continue investindo para acelerar sua jornada.
             </p>
           </div>
         </section>
 
-        {/* SITUAÇÃO ATUAL */}
+        {/* RENDA PASSIVA - SIMPLIFICADO */}
         <Card className="border border-border bg-card">
           <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <PieChart className="w-4 h-4" />
               <span className="text-xs font-bold uppercase tracking-wider text-primary">Renda Passiva</span>
             </div>
 
-            <div className="text-center space-y-2">
+            <div className="text-center">
               <p className="text-3xl font-bold text-primary">{formatCurrency(rendaPassivaAtual)}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mt-1">
                 {formatCurrency(rendaPassivaAtual)} / {formatCurrency(metaMensal)}
               </p>
-              <p className="text-xs font-bold text-muted-foreground">
+              <p className="text-xs font-bold text-muted-foreground mt-1">
                 {progresso.toFixed(1)}% da meta
               </p>
             </div>
@@ -244,18 +252,18 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* PATRIMÔNIO */}
+        {/* PATRIMÔNIO - SEM CENTAVOS */}
         <Card className="border border-border bg-card">
           <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <TrendingUp className="w-4 h-4" />
               <span className="text-xs font-bold uppercase tracking-wider text-primary">Patrimônio</span>
             </div>
 
             <div className="text-center space-y-2">
-              <p className="text-3xl font-bold">{formatCurrency(patrimonioBase)}</p>
+              <p className="text-3xl font-bold">{formatarPatrimonio(patrimonioBase)}</p>
               <p className="text-sm text-muted-foreground">
-                {formatCurrency(patrimonioBase)} / {formatCurrency(patrimonioNecessario)}
+                {formatarPatrimonio(patrimonioBase)} / {formatarPatrimonio(patrimonioNecessario)}
               </p>
               <p className="text-xs font-bold text-primary">
                 {progressoPatrimonio.toFixed(1)}% acumulado
@@ -270,23 +278,28 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* TEMPO PARA LIBERDADE */}
+        {/* TEMPO PARA LIBERDADE - MELHORADO */}
         <Card className="border border-border bg-primary/5">
-          <CardContent className="p-6 text-center space-y-3">
-            <div className="flex justify-center items-center gap-2 text-muted-foreground mb-1">
+          <CardContent className="p-6 text-center space-y-2">
+            <div className="flex justify-center items-center gap-2 text-muted-foreground mb-2">
               <Calendar className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">Independência Estimada</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">Independência</span>
             </div>
+            
             <p className="text-sm font-medium">Você está a</p>
             <h3 className="text-4xl font-bold tracking-tight text-primary">
-              {anos} anos e {meses} meses
+              {anos} anos
             </h3>
-            <p className="text-sm font-bold text-primary">{dataFormatada}</p>
-            <p className="text-xs text-muted-foreground">de viver de renda</p>
+            <p className="text-xs text-muted-foreground">de viver de renda.</p>
+
+            <div className="pt-3 border-t border-border/50 space-y-1">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Independência estimada:</p>
+              <p className="text-sm font-bold text-primary">{dataFormatada}</p>
+            </div>
           </CardContent>
         </Card>
 
-        {/* ACELERADOR YEE */}
+        {/* ACELERADOR YEE - REFORÇADO */}
         <Card className="border-2 border-primary/20 bg-primary/5 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-2">
             <Zap className="w-5 h-5 text-primary fill-primary/20" />
@@ -319,21 +332,19 @@ export default function Home() {
             </div>
 
             {/* Personalizar com bloqueio */}
-            <div className="relative">
-              <button
-                onClick={() => plano.tipo === "fundador" ? setAceleradorSelecionado('custom') : toast.info("Disponível no plano Fundador")}
-                className={`w-full py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                  aceleradorSelecionado === 'custom'
-                    ? 'bg-primary text-primary-foreground'
-                    : plano.tipo === "fundador"
-                    ? 'bg-primary/20 text-primary hover:bg-primary/30'
-                    : 'bg-accent/30 text-muted-foreground cursor-not-allowed'
-                }`}
-              >
-                Personalizar
-                {plano.tipo === "free" && <Lock className="w-3 h-3" />}
-              </button>
-            </div>
+            <button
+              onClick={() => plano.tipo === "fundador" ? setAceleradorSelecionado('custom') : toast.info("Disponível no plano Fundador")}
+              className={`w-full py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                aceleradorSelecionado === 'custom'
+                  ? 'bg-primary text-primary-foreground'
+                  : plano.tipo === "fundador"
+                  ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                  : 'bg-accent/30 text-muted-foreground cursor-not-allowed'
+              }`}
+            >
+              Personalizar
+              {plano.tipo === "free" && <Lock className="w-3 h-3" />}
+            </button>
 
             {aceleradorSelecionado === 'custom' && (
               <div className="space-y-2">
@@ -352,89 +363,38 @@ export default function Home() {
                 <div className="bg-primary/10 rounded-lg p-3 space-y-2">
                   <p className="text-xs font-bold uppercase text-primary">Com +R${valorAcelerador.toLocaleString('pt-BR')}/mês</p>
                   <div className="space-y-1">
-                    <p className="text-sm font-bold">Nova independência</p>
+                    <p className="text-sm font-bold">Nova independência:</p>
                     <p className="text-2xl font-bold text-primary">{dataAceleradorFormatada}</p>
                   </div>
                 </div>
 
                 <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-green-600 font-bold">
+                  <div className="flex items-center gap-2 text-green-600 font-bold text-sm">
                     <Zap className="w-5 h-5" />
-                    <span>Você ganha {economiaAnos > 0 ? `${economiaAnos} anos` : ''} {economiaMesesResto > 0 ? `e ${economiaMesesResto} meses` : ''} de liberdade</span>
+                    <span>⚡ Você ganha {economiaAnos > 0 ? `${economiaAnos} anos` : ''} {economiaMesesResto > 0 ? `e ${economiaMesesResto} meses` : ''} de liberdade financeira</span>
                   </div>
                 </div>
 
                 <p className="text-xs text-muted-foreground italic text-center">
-                  Pequenos aportes hoje podem antecipar anos da sua liberdade.
+                  Pequenos aportes hoje podem antecipar anos da sua liberdade financeira.
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* ANOS ECONOMIZADOS */}
+        {/* ANOS ECONOMIZADOS - REFORÇADO */}
         {valorAcelerador > 0 && (
           <Card className="border-2 border-yellow-500/30 bg-yellow-500/5">
             <CardContent className="p-6 text-center space-y-2">
               <Trophy className="w-8 h-8 text-yellow-600 mx-auto" />
-              <p className="text-xs font-bold uppercase text-yellow-600">⚡ Anos economizados</p>
+              <p className="text-xs font-bold uppercase text-yellow-600">⚡ Total de anos economizados</p>
               <p className="text-3xl font-bold text-yellow-600">
                 {economiaAnos > 0 ? `${economiaAnos}` : '0'} {economiaMesesResto > 0 ? `anos e ${economiaMesesResto} meses` : 'anos'}
               </p>
             </CardContent>
           </Card>
         )}
-
-        {/* ATUALIZAR PATRIMÔNIO */}
-        <Card className="border border-border bg-accent/30">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-primary" />
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">Atualizar Patrimônio</span>
-            </div>
-
-            {!showAtualizarPatrimonio ? (
-              <button
-                onClick={() => setShowAtualizarPatrimonio(true)}
-                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
-              >
-                Atualizar patrimônio do mês
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <div className="space-y-3">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">R$</span>
-                  <input
-                    type="number"
-                    value={patrimonioAtualizado}
-                    onChange={(e) => setPatrimonioAtualizado(e.target.value)}
-                    placeholder="Quanto você investiu?"
-                    className="w-full bg-background border border-border rounded-lg py-3 pl-10 pr-4 font-bold focus:ring-2 ring-primary outline-none"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowAtualizarPatrimonio(false)}
-                    className="flex-1 py-2 bg-accent text-accent-foreground rounded-lg font-bold transition-colors hover:bg-accent/80"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleAtualizarPatrimonio}
-                    className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg font-bold transition-colors hover:scale-[1.02]"
-                  >
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <p className="text-[10px] text-muted-foreground text-center">
-              Atualize mensalmente para manter seu progresso sincronizado.
-            </p>
-          </CardContent>
-        </Card>
       </main>
 
       <BottomNav />

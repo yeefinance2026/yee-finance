@@ -6,7 +6,6 @@ import { formatCurrency } from "@/lib/utils";
 import { Link } from "wouter";
 import { 
   ChevronLeft, 
-  DollarSign, 
   Plus, 
   Trash2,
   BarChart2,
@@ -56,9 +55,9 @@ export default function Dividendos() {
 
   const dividendos = state.dividendos || [];
   
-  // --- LÓGICA DE RENDA MÉDIA MENSAL (PROFISSIONAL) ---
+  // --- LÓGICA DE RENDA MÉDIA MENSAL ---
   
-  // 1. Juros Projetados para o mês selecionado (CDB/Tesouro)
+  // 1. Juros Projetados para o mês selecionado
   const calcularRendaJurosNoMes = () => {
     const [anoVis, mesVis] = mesVisualizacao.split("-").map(Number);
     const dataAlvo = new Date(anoVis, mesVis - 1, 1);
@@ -84,7 +83,7 @@ export default function Dividendos() {
 
   const rendaJurosMensal = Number(calcularRendaJurosNoMes().toFixed(2));
 
-  // 2. Média de Dividendos dos últimos 12 meses (LTM)
+  // 2. Média de Dividendos dos últimos 12 meses
   const dataLimite12Meses = new Date();
   dataLimite12Meses.setFullYear(dataLimite12Meses.getFullYear() - 1);
 
@@ -92,7 +91,7 @@ export default function Dividendos() {
   const totalDividendos12Meses = dividendosUltimos12Meses.reduce((acc, d) => acc + d.valor, 0);
   const mediaMensalDividendos = Number((totalDividendos12Meses / 12).toFixed(2));
 
-  // 3. Renda Passiva Média Total (Juros + Média Dividendos)
+  // 3. Renda Passiva Média Total
   const rendaPassivaMediaTotal = Number((rendaJurosMensal + mediaMensalDividendos).toFixed(2));
   const metaMensal = state.numeroLiberdade || 1000;
   
@@ -100,16 +99,26 @@ export default function Dividendos() {
   const progresso = Number(((rendaPassivaMediaTotal / metaMensal) * 100).toFixed(1));
   const faltaParaMeta = Number((metaMensal - rendaPassivaMediaTotal).toFixed(2));
 
-  // 5. Dados do Mês Selecionado (Apenas para o resumo visual)
+  // 5. Dados do Mês Selecionado
   const totalDividendosMesSelecionado = Number(dividendos
     .filter(d => d.data.startsWith(mesVisualizacao))
     .reduce((acc, d) => acc + d.valor, 0).toFixed(2));
+
+  // 6. Total de dividendos no ano
+  const anoAtual = new Date().getFullYear().toString();
+  const dividendosAnoAtual = dividendos.filter(d => d.data.startsWith(anoAtual));
+  const totalDividendosAnoAtual = dividendosAnoAtual.reduce((acc, d) => acc + d.valor, 0);
 
   const formatarMesAno = (mesStr: string) => {
     const [ano, m] = mesStr.split("-");
     const data = new Date(Number(ano), Number(m) - 1, 1);
     const nomeMes = data.toLocaleDateString("pt-BR", { month: "long" });
     return `${nomeMes} de ${ano}`;
+  };
+
+  const formatarData = (dataStr: string) => {
+    const data = new Date(dataStr + 'T00:00:00');
+    return data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   const handleAdd = async () => {
@@ -185,7 +194,7 @@ export default function Dividendos() {
         </Dialog>
       </header>
 
-      <main className="px-6 space-y-8 max-w-md mx-auto">
+      <main className="px-6 space-y-6 max-w-md mx-auto">
         {/* SELETOR DE MÊS */}
         <div className="relative group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
@@ -202,78 +211,110 @@ export default function Dividendos() {
           </div>
         </div>
 
-        {/* CARD DE COBERTURA (MÉDIA MÓVEL) */}
-        <Card className="border-none bg-primary/10 overflow-hidden relative border-l-4 border-l-primary">
-          <CardContent className="p-8 space-y-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cobertura da Liberdade (Média Mensal)</p>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[200px] text-[10px] p-2">
-                      Calculado com base na média de dividendos dos últimos 12 meses + juros projetados do mês.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <h2 className="text-6xl font-bold tracking-tighter text-primary">{progresso.toFixed(1)}%</h2>
-              <p className="text-sm font-medium text-muted-foreground">Sua renda média mensal é de {formatCurrency(rendaPassivaMediaTotal)}</p>
-            </div>
-            <Progress value={progresso} className="h-2 bg-primary/20" />
-            <p className="text-xs font-bold text-primary text-center uppercase tracking-tighter">
-              {progresso >= 100 ? "Meta atingida! 🎉" : `Progresso: ${formatCurrency(faltaParaMeta > 0 ? faltaParaMeta : 0)} para a meta de ${formatCurrency(metaMensal)}`}
+        {/* 1️⃣ RENDA MÉDIA MENSAL */}
+        <Card className="border border-border bg-card">
+          <CardContent className="p-6 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Renda Média Mensal</p>
+            <h2 className="text-4xl font-bold text-primary">≈ {formatCurrency(rendaPassivaMediaTotal)}</h2>
+            <p className="text-[10px] text-muted-foreground italic">
+              Baseado nos dividendos e juros recebidos.
             </p>
           </CardContent>
         </Card>
 
-        {/* RESUMO DO MÊS SELECIONADO */}
+        {/* 2️⃣ COBERTURA DA LIBERDADE */}
+        <Card className="border-none bg-primary/10 overflow-hidden relative">
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cobertura da Liberdade</p>
+              <h2 className="text-5xl font-bold text-primary">{progresso.toFixed(1)}%</h2>
+              <p className="text-sm text-muted-foreground">da sua meta de {formatCurrency(metaMensal)}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Progress value={progresso} className="h-2 bg-primary/20" />
+              <div className="flex justify-between text-xs font-bold text-muted-foreground">
+                <span>{formatCurrency(rendaPassivaMediaTotal)}</span>
+                <span>{formatCurrency(metaMensal)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 3️⃣ RESUMO DO MÊS SELECIONADO */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-            No Mês — <span className="text-primary capitalize">{formatarMesAno(mesVisualizacao)}</span>
+            {formatarMesAno(mesVisualizacao)}
           </h3>
-          <div className="grid grid-cols-2 gap-4">
+          
+          <div className="space-y-3">
             <Card className="border border-border bg-card">
               <CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Recebido</p>
-                <p className="text-xl font-bold text-primary">{formatCurrency(totalDividendosMesSelecionado)}</p>
-                <p className="text-[10px] text-muted-foreground">Dividendos do mês</p>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Recebido no mês</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalDividendosMesSelecionado)}</p>
               </CardContent>
             </Card>
+
             <Card className="border border-border bg-card">
               <CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Projeção RF</p>
-                <p className="text-xl font-bold text-primary">{formatCurrency(rendaJurosMensal)}</p>
-                <p className="text-[10px] text-muted-foreground">Juros compostos do mês</p>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Estimativa Renda Fixa</p>
+                <p className="text-2xl font-bold text-primary">≈ {formatCurrency(rendaJurosMensal)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Valor estimado com base nos investimentos atuais.</p>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* HISTÓRICO */}
+        {/* 4️⃣ TOTAL DE DIVIDENDOS NO ANO */}
+        {totalDividendosAnoAtual > 0 && (
+          <Card className="border-2 border-yellow-500/30 bg-yellow-500/5">
+            <CardContent className="p-6 text-center space-y-2">
+              <p className="text-xs font-bold uppercase text-yellow-600">Dividendos recebidos em {anoAtual}</p>
+              <p className="text-3xl font-bold text-yellow-600">{formatCurrency(totalDividendosAnoAtual)}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 5️⃣ HISTÓRICO DE DIVIDENDOS */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Dividendos</h3>
-          <div className="space-y-3">
-            {dividendos.sort((a, b) => b.data.localeCompare(a.data)).map(d => (
-              <Card key={d.id} className="border border-border bg-card hover:bg-accent/10 transition-colors group">
-                <CardContent className="p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><BarChart2 className="w-5 h-5 text-primary" /></div>
-                    <div>
-                      <p className="font-bold text-sm">{d.investimentoNome}</p>
-                      <p className="text-[10px] text-muted-foreground">{new Date(d.data + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+          
+          {dividendos.length === 0 ? (
+            <div className="text-center py-8 space-y-2 bg-accent/20 rounded-2xl">
+              <BarChart2 className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
+              <p className="text-sm text-muted-foreground">Nenhum dividendo lançado ainda.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {dividendos.sort((a, b) => b.data.localeCompare(a.data)).map(d => (
+                <Card key={d.id} className="border border-border bg-card hover:bg-accent/10 transition-colors">
+                  <CardContent className="p-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <BarChart2 className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm">{d.investimentoNome}</p>
+                        <p className="text-[10px] text-muted-foreground">Dividendo recebido</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <p className="font-bold text-sm text-primary">{formatCurrency(d.valor)}</p>
-                    <button onClick={() => removerDividendo(d.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-bold text-sm text-primary">{formatCurrency(d.valor)}</p>
+                        <p className="text-[10px] text-muted-foreground">{formatarData(d.data)}</p>
+                      </div>
+                      <button 
+                        onClick={() => removerDividendo(d.id)} 
+                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all flex-shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>
