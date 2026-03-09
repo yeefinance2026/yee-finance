@@ -3,22 +3,47 @@ import { useFinancial } from "@/state/FinancialContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
-  TrendingUp,
   Calendar,
-  DollarSign,
   ArrowRight,
   Settings,
   PieChart,
-  Landmark,
   BarChart2,
   Zap,
-  Target
+  Target,
+  Lock,
+  Trophy,
+  TrendingUp
 } from "lucide-react";
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
 import { formatCurrency } from "@/lib/utils";
 import { calcularMesesParaIndependencia } from "@/lib/evyCalculations";
 import { getGreeting } from "@/lib/getGreeting";
+import { toast } from "sonner";
+
+// Mensagens motivacionais baseadas no progresso
+const MENSAGENS_MOTIVACIONAIS: { [key: number]: string } = {
+  1: "Sua jornada começou 🚀",
+  5: "Você já está à frente de muitos 💪",
+  10: "Primeiro marco alcançado 🎯",
+  25: "1/4 da liberdade conquistada ✨",
+  50: "Metade da liberdade 🔥",
+  75: "Quase lá! 🏁",
+  100: "Liberdade financeira alcançada! 🎉"
+};
+
+function getMensagemMotivacional(progresso: number): string {
+  for (const [threshold, message] of Object.entries(MENSAGENS_MOTIVACIONAIS).sort((a, b) => Number(b[0]) - Number(a[0]))) {
+    if (progresso >= Number(threshold)) {
+      return message;
+    }
+  }
+  return "Sua jornada começa hoje.";
+}
+
+interface Plano {
+  tipo: "free" | "fundador";
+}
 
 export default function Home() {
   const { state, loadProfileFromSupabase } = useFinancial();
@@ -27,7 +52,9 @@ export default function Home() {
   const [aceleradorSelecionado, setAceleradorSelecionado] = useState<number | 'custom'>(200);
   const [isLoading, setIsLoading] = useState(true);
   const [greeting, setGreeting] = useState({ greeting: "", emoji: "" });
-  const userName = localStorage.getItem("evy_user_name") || "";
+  const [plano, setPlano] = useState<Plano>({ tipo: "free" });
+  const [showAtualizarPatrimonio, setShowAtualizarPatrimonio] = useState(false);
+  const [patrimonioAtualizado, setPatrimonioAtualizado] = useState("");
 
   // Carrega dados do Supabase na inicialização
   useEffect(() => {
@@ -39,7 +66,7 @@ export default function Home() {
     initializeData();
   }, [loadProfileFromSupabase]);
 
-  // Atualiza a saudação quando o estado muda (pega o nome do state)
+  // Atualiza a saudação quando o estado muda
   useEffect(() => {
     const userName = state.profile?.name || localStorage.getItem("evy_user_name") || "";
     setGreeting(getGreeting(userName));
@@ -48,7 +75,6 @@ export default function Home() {
     }, 60000);
     return () => clearInterval(interval);
   }, [state.profile?.name]);
-
 
   // Força recálculo quando o estado muda
   useEffect(() => {
@@ -59,30 +85,32 @@ export default function Home() {
   const metaMensal = state.numeroLiberdade || 1;
   const taxaAnualSegura = state.taxaAnual || 8;
 
-  // Renda de juros (calculada automaticamente pela taxa anual)
+  // Renda de juros
   const rendaJuros = state.investimentos
     .filter(inv => inv.tipoRendimento === "juros")
     .reduce((acc, inv) => acc + (inv.valor * (inv.taxaAnual / 100)) / 12, 0);
 
-  // Dividendos do mês atual (lançados manualmente)
+  // Dividendos do mês atual
   const mesAtual = new Date().toISOString().slice(0, 7);
   const dividendosMesAtual = (state.dividendos || []).filter(d => d.mes === mesAtual);
   const totalDividendosMes = dividendosMesAtual.reduce((acc, d) => acc + d.valor, 0);
 
-  // Renda passiva total = juros + dividendos manuais
+  // Renda passiva total
   const rendaPassivaAtual = rendaJuros + totalDividendosMes;
 
   const progresso = metaMensal > 0 ? Math.min(100, (rendaPassivaAtual / metaMensal) * 100) : 0;
   const faltaMensal = Math.max(0, metaMensal - rendaPassivaAtual);
+  const progressoRestante = 100 - progresso;
 
-  // Patrimônio: usa o valor manual se definido, senão soma dos investimentos
+  // Patrimônio
   const patrimonioBase = (state.patrimonioAtual && state.patrimonioAtual > 0)
     ? state.patrimonioAtual
     : totalInvestido;
 
-  // Cálculo de patrimônio necessário baseado em 0.6% ao mês (padrão Yee Finance)
+  // Cálculo de patrimônio necessário
   const taxaMensalPadrao = 0.006;
   const patrimonioNecessario = metaMensal > 0 ? metaMensal / taxaMensalPadrao : 0;
+  const progressoPatrimonio = patrimonioNecessario > 0 ? Math.min(100, (patrimonioBase / patrimonioNecessario) * 100) : 0;
 
   const aporteMensalSeguro = state.aporteMensal || 0;
   const mesesRestantes = calcularMesesParaIndependencia(
@@ -95,7 +123,12 @@ export default function Home() {
   const anos = isFinite(mesesRestantes) ? Math.floor(mesesRestantes / 12) : 0;
   const meses = isFinite(mesesRestantes) ? Math.floor(mesesRestantes % 12) : 0;
 
-  // Acelerador selecionado (200, 500 ou custom)
+  // Data de independência
+  const dataIndependencia = new Date();
+  dataIndependencia.setMonth(dataIndependencia.getMonth() + Math.floor(mesesRestantes));
+  const dataFormatada = dataIndependencia.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  // Acelerador
   const valorAcelerador = aceleradorSelecionado === 'custom' ? aceleradorCustom : (aceleradorSelecionado as number);
   const mesesComAcelerador = calcularMesesParaIndependencia(
     patrimonioBase,
@@ -107,7 +140,23 @@ export default function Home() {
   const economiaAnos = Math.floor(economiaMeses / 12);
   const economiaMesesResto = Math.floor(economiaMeses % 12);
 
-  // Dependência do forceUpdate garante que o componente re-renderize quando necessário
+  // Data com acelerador
+  const dataComAcelerador = new Date();
+  dataComAcelerador.setMonth(dataComAcelerador.getMonth() + Math.floor(mesesComAcelerador));
+  const dataAceleradorFormatada = dataComAcelerador.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const handleAtualizarPatrimonio = () => {
+    if (!patrimonioAtualizado) {
+      toast.error("Digite um valor para atualizar");
+      return;
+    }
+    const valor = Number(patrimonioAtualizado);
+    const novoPatrimonio = patrimonioBase + valor;
+    toast.success(`🎉 Atualização concluída!\nSeu patrimônio subiu de ${formatCurrency(patrimonioBase)} para ${formatCurrency(novoPatrimonio)}`);
+    setPatrimonioAtualizado("");
+    setShowAtualizarPatrimonio(false);
+  };
+
   void forceUpdate;
 
   if (isLoading) {
@@ -135,8 +184,8 @@ export default function Home() {
         </Link>
       </header>
 
-      <main className="px-6 space-y-8 max-w-md mx-auto">
-        {/* BLOCO 0 — SAUDAÇÃO PERSONALIZADA */}
+      <main className="px-6 space-y-6 max-w-md mx-auto">
+        {/* SAUDAÇÃO */}
         <section className="text-left space-y-1">
           <h2 className="text-2xl font-bold tracking-tight">
             {greeting.emoji} {greeting.greeting}
@@ -146,92 +195,115 @@ export default function Home() {
           </p>
         </section>
 
-        {/* BLOCO 1 — NÚMERO DOMINANTE */}
-        <section className="text-center space-y-4 py-4">
-          <h2 className="text-6xl font-bold tracking-tighter text-primary">
-            {progresso.toFixed(0)}%
-          </h2>
-          <p className="text-muted-foreground font-bold text-lg">
-            {progresso === 0 ? "Sua jornada começa hoje." : "da sua liberdade conquistada"}
-          </p>
+        {/* NÚMERO DOMINANTE COM GAMIFICAÇÃO */}
+        <section className="text-center space-y-4 py-6">
+          <div className="space-y-2">
+            <h2 className="text-6xl font-bold tracking-tighter text-primary">
+              {progresso.toFixed(0)}%
+            </h2>
+            <p className="text-muted-foreground font-bold text-lg">
+              {getMensagemMotivacional(progresso)}
+            </p>
+          </div>
 
-          <div className="space-y-2 pt-2">
+          {/* Progresso tangível */}
+          <div className="bg-accent/30 rounded-2xl p-4 space-y-2">
+            <div className="flex justify-between text-sm font-bold">
+              <span className="text-primary">{progresso.toFixed(1)}% conquistado</span>
+              <span className="text-muted-foreground">{progressoRestante.toFixed(1)}% restante</span>
+            </div>
             <Progress value={progresso} className="h-3" />
+            <p className="text-xs text-muted-foreground pt-2">
+              {formatCurrency(rendaPassivaAtual)} / {formatCurrency(metaMensal)} de renda passiva
+            </p>
           </div>
         </section>
 
-        {/* BLOCO 2 — SITUAÇÃO ATUAL */}
+        {/* SITUAÇÃO ATUAL */}
         <Card className="border border-border bg-card">
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <PieChart className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">Situação Atual</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">Renda Passiva</span>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Meta mensal: <span className="text-foreground font-bold">{formatCurrency(metaMensal)}</span></p>
-              <p className="text-sm text-muted-foreground">Renda passiva atual: <span className="text-primary font-bold">{formatCurrency(rendaPassivaAtual)}</span></p>
+            <div className="text-center space-y-2">
+              <p className="text-3xl font-bold text-primary">{formatCurrency(rendaPassivaAtual)}</p>
+              <p className="text-sm text-muted-foreground">
+                {formatCurrency(rendaPassivaAtual)} / {formatCurrency(metaMensal)}
+              </p>
+              <p className="text-xs font-bold text-muted-foreground">
+                {progresso.toFixed(1)}% da meta
+              </p>
             </div>
 
-            <div className="pt-3 border-t border-border/50 flex justify-between text-[11px] font-medium text-muted-foreground italic">
-              <span>({formatCurrency(rendaJuros)} juros + {formatCurrency(totalDividendosMes)} dividendos)</span>
+            <div className="pt-3 border-t border-border/50 flex justify-between text-[11px] font-medium text-muted-foreground">
+              <span>{formatCurrency(rendaJuros)} juros</span>
+              <span>{formatCurrency(totalDividendosMes)} dividendos</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* BLOCO 3 — PRÓXIMO PASSO */}
+        {/* PATRIMÔNIO */}
         <Card className="border border-border bg-card">
           <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
-              <Target className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">Próximo Passo</span>
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-2xl font-bold text-primary">+{formatCurrency(faltaMensal)} por mês</h3>
-              <p className="text-xs text-muted-foreground font-medium">Renda necessária para alcançar sua independência.</p>
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">Patrimônio</span>
             </div>
 
-            <div className="pt-4 border-t border-border/50 space-y-3">
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Patrimônio necessário para independência:</p>
-                <p className="text-xl font-bold">{formatCurrency(patrimonioNecessario)}</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] text-muted-foreground italic max-w-[180px]">
-                  Simulação baseada em rendimento médio de 0,6% ao mês.
-                </p>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">Patrimônio atual:</p>
-                  <p className="text-sm font-bold text-primary">{formatCurrency(patrimonioBase)}</p>
-                </div>
-              </div>
+            <div className="text-center space-y-2">
+              <p className="text-3xl font-bold">{formatCurrency(patrimonioBase)}</p>
+              <p className="text-sm text-muted-foreground">
+                {formatCurrency(patrimonioBase)} / {formatCurrency(patrimonioNecessario)}
+              </p>
+              <p className="text-xs font-bold text-primary">
+                {progressoPatrimonio.toFixed(1)}% acumulado
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-border/50">
+              <p className="text-[10px] text-muted-foreground italic">
+                Simulação baseada em rendimento médio de 0,6% ao mês.
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* BLOCO 4 — TEMPO ESTIMADO */}
+        {/* TEMPO PARA LIBERDADE */}
         <Card className="border border-border bg-primary/5">
           <CardContent className="p-6 text-center space-y-3">
             <div className="flex justify-center items-center gap-2 text-muted-foreground mb-1">
               <Calendar className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">Tempo Estimado</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">Independência Estimada</span>
             </div>
-            <p className="text-sm font-medium">Independência financeira em:</p>
+            <p className="text-sm font-medium">Você está a</p>
             <h3 className="text-4xl font-bold tracking-tight text-primary">
               {anos} anos e {meses} meses
             </h3>
+            <p className="text-sm font-bold text-primary">{dataFormatada}</p>
+            <p className="text-xs text-muted-foreground">de viver de renda</p>
           </CardContent>
         </Card>
 
-        {/* BLOCO 5 — ACELERADOR YEE */}
+        {/* ACELERADOR YEE */}
         <Card className="border-2 border-primary/20 bg-primary/5 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-2">
             <Zap className="w-5 h-5 text-primary fill-primary/20" />
           </div>
           <CardContent className="p-6 space-y-4">
-            <p className="text-sm font-bold text-primary uppercase tracking-widest">Acelerador Yee</p>
+            <div className="space-y-1">
+              <p className="text-sm font-bold text-primary uppercase tracking-widest">⚡ Acelerador Yee</p>
+              <p className="text-xs text-muted-foreground">Quanto você quer acelerar sua liberdade?</p>
+            </div>
 
             <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => { setAceleradorSelecionado(100 as number | 'custom'); setAceleradorCustom(0); }}
+                className={`py-2 px-3 rounded-lg font-bold text-sm transition-all ${aceleradorSelecionado === 100 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'}`}
+              >
+                +R$ 100
+              </button>
               <button
                 onClick={() => { setAceleradorSelecionado(200 as number | 'custom'); setAceleradorCustom(0); }}
                 className={`py-2 px-3 rounded-lg font-bold text-sm transition-all ${aceleradorSelecionado === 200 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'}`}
@@ -244,11 +316,22 @@ export default function Home() {
               >
                 +R$ 500
               </button>
+            </div>
+
+            {/* Personalizar com bloqueio */}
+            <div className="relative">
               <button
-                onClick={() => setAceleradorSelecionado('custom')}
-                className={`py-2 px-3 rounded-lg font-bold text-sm transition-all ${aceleradorSelecionado === 'custom' ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'}`}
+                onClick={() => plano.tipo === "fundador" ? setAceleradorSelecionado('custom') : toast.info("Disponível no plano Fundador")}
+                className={`w-full py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                  aceleradorSelecionado === 'custom'
+                    ? 'bg-primary text-primary-foreground'
+                    : plano.tipo === "fundador"
+                    ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                    : 'bg-accent/30 text-muted-foreground cursor-not-allowed'
+                }`}
               >
                 Personalizar
+                {plano.tipo === "free" && <Lock className="w-3 h-3" />}
               </button>
             </div>
 
@@ -265,16 +348,91 @@ export default function Home() {
             )}
 
             {valorAcelerador > 0 && (
-              <div className="pt-2 border-t border-primary/20">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Se investir <span className="font-bold text-primary">+R$ {valorAcelerador.toLocaleString('pt-BR')}</span>/mês:
+              <div className="pt-4 border-t border-primary/20 space-y-3">
+                <div className="bg-primary/10 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-bold uppercase text-primary">Com +R${valorAcelerador.toLocaleString('pt-BR')}/mês</p>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold">Nova independência</p>
+                    <p className="text-2xl font-bold text-primary">{dataAceleradorFormatada}</p>
+                  </div>
+                </div>
+
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-green-600 font-bold">
+                    <Zap className="w-5 h-5" />
+                    <span>Você ganha {economiaAnos > 0 ? `${economiaAnos} anos` : ''} {economiaMesesResto > 0 ? `e ${economiaMesesResto} meses` : ''} de liberdade</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground italic text-center">
+                  Pequenos aportes hoje podem antecipar anos da sua liberdade.
                 </p>
-                <div className="flex items-center gap-2 text-primary font-bold text-lg">
-                  <ArrowRight className="w-5 h-5" />
-                  <span>Anteciparia sua liberdade em {economiaAnos > 0 ? `${economiaAnos} anos e ` : ''}{Math.floor(economiaMesesResto)} meses.</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ANOS ECONOMIZADOS */}
+        {valorAcelerador > 0 && (
+          <Card className="border-2 border-yellow-500/30 bg-yellow-500/5">
+            <CardContent className="p-6 text-center space-y-2">
+              <Trophy className="w-8 h-8 text-yellow-600 mx-auto" />
+              <p className="text-xs font-bold uppercase text-yellow-600">⚡ Anos economizados</p>
+              <p className="text-3xl font-bold text-yellow-600">
+                {economiaAnos > 0 ? `${economiaAnos}` : '0'} {economiaMesesResto > 0 ? `anos e ${economiaMesesResto} meses` : 'anos'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ATUALIZAR PATRIMÔNIO */}
+        <Card className="border border-border bg-accent/30">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-primary" />
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">Atualizar Patrimônio</span>
+            </div>
+
+            {!showAtualizarPatrimonio ? (
+              <button
+                onClick={() => setShowAtualizarPatrimonio(true)}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+              >
+                Atualizar patrimônio do mês
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">R$</span>
+                  <input
+                    type="number"
+                    value={patrimonioAtualizado}
+                    onChange={(e) => setPatrimonioAtualizado(e.target.value)}
+                    placeholder="Quanto você investiu?"
+                    className="w-full bg-background border border-border rounded-lg py-3 pl-10 pr-4 font-bold focus:ring-2 ring-primary outline-none"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowAtualizarPatrimonio(false)}
+                    className="flex-1 py-2 bg-accent text-accent-foreground rounded-lg font-bold transition-colors hover:bg-accent/80"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAtualizarPatrimonio}
+                    className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg font-bold transition-colors hover:scale-[1.02]"
+                  >
+                    Confirmar
+                  </button>
                 </div>
               </div>
             )}
+
+            <p className="text-[10px] text-muted-foreground text-center">
+              Atualize mensalmente para manter seu progresso sincronizado.
+            </p>
           </CardContent>
         </Card>
       </main>
