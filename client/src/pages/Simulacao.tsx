@@ -1,234 +1,330 @@
-import { useState, useMemo } from "react";
+
+import { useState } from "react";
 import { useFinancial } from "@/state/FinancialContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { formatCurrency } from "@/lib/utils";
-import { Link } from "wouter";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   ChevronLeft, 
   TrendingUp, 
   Calendar, 
-  Target,
-  Sparkles,
-  Lock,
-  Crown,
-  Info,
+  DollarSign, 
   ArrowRight,
-  Save,
-  CheckCircle2
+  RefreshCcw,
+  CheckCircle2,
+  PieChart,
+  AlertCircle
 } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
+import { Link } from "wouter";
+import { formatCurrency } from "@/lib/utils";
+import { calcularMesesParaIndependencia } from "@/lib/evyCalculations";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
-export default function Simulador() {
-  const { state, setAporteMensal, setTaxaAnual } = useFinancial();
+export default function Simulacao() {
+  const { state, setNumeroLiberdade, setAporteMensal, setTaxaAnual, setPatrimonioAtual } = useFinancial();
   
-  // --- LÓGICA DE PLANO ---
-  const planoTipo = state.profile?.plan || "free";
-  const isFounder = planoTipo === "founder";
+  // Simulation parameters (local, não afetam a home até confirmar)
+  const [meta, setMeta] = useState(state.numeroLiberdade);
+  const [aporte, setAporte] = useState(state.aporteMensal);
+  const [taxa, setTaxa] = useState(state.taxaAnual);
+  const [aporteExtra, setAporteExtra] = useState(0);
+  const [patrimonioSim, setPatrimonioSim] = useState(
+    state.patrimonioAtual && state.patrimonioAtual > 0 
+      ? state.patrimonioAtual 
+      : state.investimentos.reduce((acc, inv) => acc + inv.valor, 0)
+  );
+
+  // Modal de confirmação
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  const totalInvestido = state.investimentos.reduce((acc, inv) => acc + (inv.valor || 0), 0);
+  const patrimonioBase = (state.patrimonioAtual && state.patrimonioAtual > 0) 
+    ? state.patrimonioAtual 
+    : totalInvestido;
   
-  const MAX_ANOS_FREE = 10;
-  const MAX_ANOS_FOUNDER = 50;
-  const limiteAnos = isFounder ? MAX_ANOS_FOUNDER : MAX_ANOS_FREE;
+  // Current Scenario
+  const taxaMensalPadrao = 0.006;
+  const metaSegura = state.numeroLiberdade || 1;
+  const aporteSeguro = state.aporteMensal || 0;
+  const taxaSegura = state.taxaAnual || 8;
+  const patrimonioNecessarioAtual = metaSegura > 0 ? metaSegura / taxaMensalPadrao : 0;
+  const mesesAtual = (() => {
+    const m = calcularMesesParaIndependencia(
+      patrimonioBase, aporteSeguro, taxaSegura / 100, patrimonioNecessarioAtual
+    );
+    return isFinite(m) ? m : 0;
+  })();
+  
+  const dataAtual = new Date();
+  dataAtual.setMonth(dataAtual.getMonth() + mesesAtual);
+  const dataFormatadaAtual = dataAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-  // Estados da Simulação
-  const [anos, setAnos] = useState(10);
-  const [aporteMensalSimulado, setAporteMensalSimulado] = useState(state.aporteMensal || 500);
-  const [taxaAnualSimulada, setTaxaAnualSimulada] = useState(state.taxaAnual || 10);
-  const [isSaving, setIsSaving] = useState(false);
+  // New Scenario
+  const metaNova = meta || 1;
+  const taxaNova = taxa || 8;
+  const patrimonioNecessarioNovo = metaNova > 0 ? metaNova / taxaMensalPadrao : 0;
+  const mesesNovo = (() => {
+    const m = calcularMesesParaIndependencia(
+      patrimonioSim, aporte + aporteExtra, taxaNova / 100, patrimonioNecessarioNovo
+    );
+    return isFinite(m) ? m : 0;
+  })();
+  
+  const dataNova = new Date();
+  dataNova.setMonth(dataNova.getMonth() + mesesNovo);
+  const dataFormatadaNova = dataNova.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-  // Cálculo da Projeção
-  const projecao = useMemo(() => {
-    const meses = anos * 12;
-    const taxaMensal = (taxaAnualSimulada / 100) / 12;
-    let montante = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
-    
-    for (let i = 1; i <= meses; i++) {
-      montante = (montante + aporteMensalSimulado) * (1 + taxaMensal);
-    }
-    
-    const totalInvestido = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0) + (aporteMensalSimulado * meses);
-    
-    return {
-      total: montante,
-      apenasJuros: montante - totalInvestido
-    };
-  }, [anos, aporteMensalSimulado, taxaAnualSimulada, state.investimentos]);
+  const diferencaMeses = Math.max(0, mesesAtual - mesesNovo);
+  const diferencaAnos = Math.floor(Math.abs(diferencaMeses) / 12);
+  const diferencaMesesResto = Math.abs(diferencaMeses) % 12;
 
-  const rendaMensalProjetada = (projecao.total * (taxaAnualSimulada / 100)) / 12;
-  const coberturaMeta = (rendaMensalProjetada / state.numeroLiberdade) * 100;
+  // Verifica se há mudanças em relação ao estado atual
+  const temMudancas = 
+    meta !== state.numeroLiberdade || 
+    aporte !== state.aporteMensal || 
+    taxa !== state.taxaAnual ||
+    patrimonioSim !== patrimonioBase;
 
-  // FUNÇÃO PARA SALVAR NA HOME / PERFIL (USANDO ALERT PADRÃO)
-  const handleSaveToProfile = async () => {
-    setIsSaving(true);
-    try {
-      await setAporteMensal(aporteMensalSimulado);
-      await setTaxaAnual(taxaAnualSimulada);
-      
-      alert(isFounder ? "✨ Perfil Founder Atualizado com Sucesso!" : "Perfil Atualizado com Sucesso!");
-    } catch (error) {
-      alert("Erro ao salvar: Não foi possível atualizar seu perfil.");
-    } finally {
-      setIsSaving(false);
-    }
+  const handleAplicar = () => {
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmar = () => {
+    setNumeroLiberdade(meta);
+    setAporteMensal(aporte);
+    setTaxaAnual(taxa);
+    setPatrimonioAtual(patrimonioSim);
+    setIsConfirmOpen(false);
+    toast.success("Configurações aplicadas à Home com sucesso!");
   };
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="p-6 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Link href="/app">
-            <button className="p-2 hover:bg-accent rounded-full transition-colors">
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          </Link>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold">Simulador</h1>
-            {isFounder && (
-              <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold flex items-center gap-1 w-fit">
-                <Crown className="w-2 h-2" /> PLANO FOUNDER
-              </span>
-            )}
-          </div>
-        </div>
-        
-        <button 
-          onClick={handleSaveToProfile}
-          disabled={isSaving}
-          className={`p-3 rounded-xl transition-all ${isSaving ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
-        >
-          {isSaving ? <div className="w-5 h-5 border-2 border-primary border-t-transparent animate-spin rounded-full" /> : <Save className="w-5 h-5" />}
-        </button>
+      <header className="p-6 flex items-center gap-4">
+        <Link href="/app">
+          <button className="p-2 hover:bg-accent rounded-full transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+        </Link>
+        <h1 className="text-xl font-bold">Simulador</h1>
       </header>
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
-        {/* CARD DE RESULTADO PRINCIPAL */}
-        <Card className="border-none bg-primary text-primary-foreground shadow-lg shadow-primary/20 overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <TrendingUp className="w-32 h-32" />
-          </div>
-          <CardContent className="p-8 space-y-6 relative z-10">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Patrimônio em {anos} anos</p>
-              <h2 className="text-5xl font-bold tracking-tighter">{formatCurrency(projecao.total)}</h2>
-              <p className="text-sm font-medium opacity-90 flex items-center gap-1">
-                Gerando {formatCurrency(rendaMensalProjetada)} / mês de renda passiva
-              </p>
+        {/* Comparação de cenários */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="border border-border bg-card">
+            <CardContent className="p-4 space-y-2">
+              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Cenário Atual</p>
+              <p className="text-lg font-bold text-primary">{dataFormatadaAtual}</p>
+              <p className="text-[10px] text-muted-foreground">{Math.floor(mesesAtual/12)}a {mesesAtual%12}m a partir de hoje</p>
+            </CardContent>
+          </Card>
+          
+          <Card className={`border ${diferencaMeses >= 0 ? 'border-primary/30 bg-primary/5' : 'border-destructive/30 bg-destructive/5'}`}>
+            <CardContent className="p-4 space-y-2">
+              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Novo Cenário</p>
+              <p className={`text-lg font-bold ${diferencaMeses >= 0 ? 'text-primary' : 'text-destructive'}`}>{dataFormatadaNova}</p>
+              {diferencaMeses !== 0 && (
+                <div className="flex items-center gap-1 text-[10px] font-bold">
+                  {diferencaMeses > 0 ? (
+                    <span className="text-primary">▲ Antecipa em {diferencaAnos > 0 ? `${diferencaAnos}a ` : ''}{diferencaMesesResto}m</span>
+                  ) : (
+                    <span className="text-destructive">▼ Atrasa em {diferencaAnos > 0 ? `${diferencaAnos}a ` : ''}{diferencaMesesResto}m</span>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Parâmetros */}
+        <Card className="border border-border bg-card">
+          <CardContent className="p-6 space-y-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <RefreshCcw className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-wider">Ajuste os parâmetros</span>
             </div>
             
-            <div className="pt-4 border-t border-white/10 space-y-3">
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Cobertura da Meta</p>
-                <span className="font-bold text-sm">{coberturaMeta.toFixed(1)}%</span>
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Meta de Renda (R$/mês)</Label>
+                <Input 
+                  type="number" 
+                  value={meta} 
+                  onChange={(e) => setMeta(Number(e.target.value))} 
+                  className="rounded-xl py-6 bg-background" 
+                />
+                {meta !== state.numeroLiberdade && (
+                  <p className="text-[10px] text-primary font-bold">
+                    Atual na Home: {formatCurrency(state.numeroLiberdade)}/mês
+                  </p>
+                )}
               </div>
-              <Progress value={coberturaMeta} className="h-2 bg-white/20" />
+              
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Patrimônio Atual (R$)</Label>
+                <Input 
+                  type="number" 
+                  value={patrimonioSim} 
+                  onChange={(e) => setPatrimonioSim(Number(e.target.value))} 
+                  className="rounded-xl py-6 bg-background" 
+                />
+                {patrimonioSim !== patrimonioBase && (
+                  <p className="text-[10px] text-primary font-bold">
+                    Atual na Home: {formatCurrency(patrimonioBase)}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Aporte mensal (R$/mês)</Label>
+                <Input 
+                  type="number" 
+                  value={aporte} 
+                  onChange={(e) => setAporte(Number(e.target.value))} 
+                  className="rounded-xl py-6 bg-background" 
+                />
+                {aporte !== state.aporteMensal && (
+                  <p className="text-[10px] text-primary font-bold">
+                    Atual na Home: {formatCurrency(state.aporteMensal)}/mês
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Aporte extra mensal (R$/mês)</Label>
+                <Input 
+                  type="number" 
+                  value={aporteExtra} 
+                  onChange={(e) => setAporteExtra(Number(e.target.value))} 
+                  className="rounded-xl py-6 bg-primary/5 border-primary/20" 
+                  placeholder="Ex: 200" 
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Rentabilidade anual (%)</Label>
+                <Input 
+                  type="number" 
+                  value={taxa} 
+                  onChange={(e) => setTaxa(Number(e.target.value))} 
+                  className="rounded-xl py-6 bg-background" 
+                />
+                {taxa !== state.taxaAnual && (
+                  <p className="text-[10px] text-primary font-bold">
+                    Atual na Home: {state.taxaAnual}% a.a.
+                  </p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* CONTROLES DA SIMULAÇÃO */}
-        <div className="space-y-8">
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Tempo: {anos} anos</Label>
-                {!isFounder && anos >= MAX_ANOS_FREE && (
-                  <span className="text-[10px] text-primary font-bold flex items-center gap-1">
-                    <Lock className="w-2 h-2" /> LIMITE FREE
-                  </span>
-                )}
-              </div>
-              <Slider 
-                value={[anos]} 
-                onValueChange={(v) => setAnos(v[0])} 
-                max={limiteAnos} 
-                min={1} 
-                step={1}
-                className="py-4"
-              />
-            </div>
-
-            <div className="space-y-4">
-              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Aporte Mensal: {formatCurrency(aporteMensalSimulado)}</Label>
-              <Slider 
-                value={[aporteMensalSimulado]} 
-                onValueChange={(v) => setAporteMensalSimulado(v[0])} 
-                max={10000} 
-                min={100} 
-                step={100}
-                className="py-4"
-              />
-            </div>
-
-            <div className="space-y-4">
-              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Taxa Anual Esperada: {taxaAnualSimulada}%</Label>
-              <Slider 
-                value={[taxaAnualSimulada]} 
-                onValueChange={(v) => setTaxaAnualSimulada(v[0])} 
-                max={20} 
-                min={1} 
-                step={0.5}
-                className="py-4"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* BOTÃO DE AÇÃO PARA SALVAR NO PERFIL */}
-        <button 
-          onClick={handleSaveToProfile}
-          disabled={isSaving}
-          className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 hover:scale-[1.02] transition-all disabled:opacity-50"
-        >
-          {isSaving ? "Salvando..." : (
-            <>
-              {isFounder ? <Sparkles className="w-5 h-5" /> : <Save className="w-5 h-5" />}
-              Aplicar no Meu Perfil
-            </>
-          )}
-        </button>
-
-        {/* BANNER DE UPGRADE - SÓ PARA FREE */}
-        {!isFounder && (
-          <Card className="border-none bg-primary/10 border-l-4 border-l-primary overflow-hidden">
+        {/* Resumo do Novo Cenário */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Resumo do Novo Cenário</h3>
+          <Card className="border border-border bg-card">
             <CardContent className="p-6 space-y-4">
-              <div className="flex items-start gap-3">
-                <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-sm font-bold text-primary">Simulação Ilimitada</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Como Founder, você pode simular até **50 anos** e ver o real impacto dos juros compostos na sua vida.
-                  </p>
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Capital necessário</span>
+                <span className="font-bold">{formatCurrency(patrimonioNecessarioNovo)}</span>
               </div>
-              <Link href="/checkout">
-                <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
-                  ✨ Desbloquear Simulação Completa
-                </button>
-              </Link>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Capital simulado</span>
+                <span className="font-bold">{formatCurrency(patrimonioSim)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-4 border-t border-border/50">
+                <span className="text-sm font-bold">Independência em</span>
+                <span className="font-bold text-primary text-lg">{dataFormatadaNova}</span>
+              </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Botão de aplicar à Home */}
+        {temMudancas && (
+          <button
+            onClick={handleAplicar}
+            className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            Aplicar à Home
+          </button>
         )}
 
-        {/* DETALHES TÉCNICOS */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Resumo da Projeção</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="bg-card border-none shadow-sm">
-              <CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Total em Juros</p>
-                <p className="text-xl font-bold text-primary">{formatCurrency(projecao.apenasJuros)}</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-card border-none shadow-sm">
-              <CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Renda Futura</p>
-                <p className="text-xl font-bold text-primary">{formatCurrency(rendaMensalProjetada)}</p>
-              </CardContent>
-            </Card>
+        {!temMudancas && (
+          <div className="text-center py-4">
+            <p className="text-xs text-muted-foreground">
+              Ajuste os parâmetros acima para simular e depois aplique à Home.
+            </p>
           </div>
-        </div>
+        )}
       </main>
+
+      {/* Modal de Confirmação */}
+      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-primary" />
+              Confirmar alterações
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              As seguintes configurações serão aplicadas à tela Home:
+            </p>
+            <div className="space-y-2 bg-accent/30 rounded-xl p-4">
+              {meta !== state.numeroLiberdade && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Meta de renda</span>
+                  <span className="font-bold text-primary">{formatCurrency(meta)}/mês</span>
+                </div>
+              )}
+              {patrimonioSim !== patrimonioBase && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Patrimônio atual</span>
+                  <span className="font-bold text-primary">{formatCurrency(patrimonioSim)}</span>
+                </div>
+              )}
+              {aporte !== state.aporteMensal && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Aporte mensal</span>
+                  <span className="font-bold text-primary">{formatCurrency(aporte)}/mês</span>
+                </div>
+              )}
+              {taxa !== state.taxaAnual && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Rentabilidade</span>
+                  <span className="font-bold text-primary">{taxa}% a.a.</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="gap-3">
+            <button
+              onClick={() => setIsConfirmOpen(false)}
+              className="flex-1 py-3 border border-border rounded-2xl font-bold text-sm text-muted-foreground hover:bg-accent/30 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirmar}
+              className="flex-1 py-3 bg-primary text-primary-foreground rounded-2xl font-bold text-sm shadow-lg shadow-primary/20"
+            >
+              Confirmar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
