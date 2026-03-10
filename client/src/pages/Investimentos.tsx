@@ -58,15 +58,17 @@ export default function Investimentos() {
   const totalAtivos = state.investimentos.length;
   const botaoAddDisabled = !isFounder && totalAtivos >= LIMITE_FREE;
 
-  // --- LÓGICA DE CÁLCULO IGUAL À HOME ---
+  // --- LÓGICA DE CÁLCULO SINCRONIZADA COM A HOME ---
   const patrimonioTotal = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
-  const metaPatrimonio = (state.numeroLiberdade * 12) / (state.taxaAnual / 100);
+  
+  // MESMA FÓRMULA DA HOME
+  const taxaAnualBase = state.taxaAnual || 10;
+  const metaPatrimonio = (state.numeroLiberdade * 12) / (taxaAnualBase / 100);
+  
   const progressoPatrimonio = Math.min((patrimonioTotal / metaPatrimonio) * 100, 100);
 
   const handleAdd = async () => {
     if (!nome || !valor) return;
-    
-    // Bloqueio de segurança para usuários Free
     if (!isFounder && totalAtivos >= LIMITE_FREE) return;
 
     await adicionarInvestimento({
@@ -195,7 +197,6 @@ export default function Investimentos() {
           </Card>
         )}
 
-        {/* CARD DE META E PATRIMÔNIO (SINCRONIZADO COM A HOME) */}
         <Card className="border-none bg-card shadow-sm">
           <CardContent className="p-6 space-y-4">
             <div className="flex justify-between items-start">
@@ -264,13 +265,6 @@ export default function Investimentos() {
                 </CardContent>
               </Card>
             ))}
-
-            {state.investimentos.length === 0 && (
-              <div className="py-12 text-center space-y-2">
-                <p className="text-muted-foreground text-sm">Nenhum ativo cadastrado.</p>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Comece adicionando seu primeiro investimento</p>
-              </div>
-            )}
           </div>
         </div>
       </main>

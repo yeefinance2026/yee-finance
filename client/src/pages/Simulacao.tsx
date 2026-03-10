@@ -13,61 +13,65 @@ import {
   Lock,
   Crown,
   Info,
-  ArrowRight
+  ArrowRight,
+  Save,
+  CheckCircle2
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export default function Simulador() {
-  const { state } = useFinancial();
+  const { state, setAporteMensal, setTaxaAnual } = useFinancial();
   
   // --- LÓGICA DE PLANO ---
   const planoTipo = state.profile?.plan || "free";
   const isFounder = planoTipo === "founder";
   
-  // Limites de Simulação
   const MAX_ANOS_FREE = 10;
   const MAX_ANOS_FOUNDER = 50;
   const limiteAnos = isFounder ? MAX_ANOS_FOUNDER : MAX_ANOS_FREE;
 
   // Estados da Simulação
   const [anos, setAnos] = useState(10);
-  const [aporteMensal, setAporteMensal] = useState(state.aporteMensal || 500);
-  const [taxaAnual, setTaxaAnual] = useState(state.taxaAnual || 10);
+  const [aporteMensalSimulado, setAporteMensalSimulado] = useState(state.aporteMensal || 500);
+  const [taxaAnualSimulada, setTaxaAnualSimulada] = useState(state.taxaAnual || 10);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Cálculo da Projeção
   const projecao = useMemo(() => {
     const meses = anos * 12;
-    const taxaMensal = (taxaAnual / 100) / 12;
+    const taxaMensal = (taxaAnualSimulada / 100) / 12;
     let montante = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
     
-    const dadosGrafico = [];
-    
     for (let i = 1; i <= meses; i++) {
-      montante = (montante + aporteMensal) * (1 + taxaMensal);
-      if (i % 12 === 0) {
-        dadosGrafico.push({
-          ano: i / 12,
-          valor: montante
-        });
-      }
+      montante = (montante + aporteMensalSimulado) * (1 + taxaMensal);
     }
+    
+    const totalInvestido = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0) + (aporteMensalSimulado * meses);
     
     return {
       total: montante,
-      apenasJuros: montante - (state.investimentos.reduce((acc, inv) => acc + inv.valor, 0) + (aporteMensal * meses)),
-      historico: dadosGrafico
+      apenasJuros: montante - totalInvestido
     };
-  }, [anos, aporteMensal, taxaAnual, state.investimentos]);
+  }, [anos, aporteMensalSimulado, taxaAnualSimulada, state.investimentos]);
 
-  const rendaMensalProjetada = (projecao.total * (taxaAnual / 100)) / 12;
+  const rendaMensalProjetada = (projecao.total * (taxaAnualSimulada / 100)) / 12;
   const coberturaMeta = (rendaMensalProjetada / state.numeroLiberdade) * 100;
+
+  // FUNÇÃO PARA SALVAR NA HOME / PERFIL (USANDO ALERT PADRÃO)
+  const handleSaveToProfile = async () => {
+    setIsSaving(true);
+    try {
+      await setAporteMensal(aporteMensalSimulado);
+      await setTaxaAnual(taxaAnualSimulada);
+      
+      alert(isFounder ? "✨ Perfil Founder Atualizado com Sucesso!" : "Perfil Atualizado com Sucesso!");
+    } catch (error) {
+      alert("Erro ao salvar: Não foi possível atualizar seu perfil.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -87,6 +91,14 @@ export default function Simulador() {
             )}
           </div>
         </div>
+        
+        <button 
+          onClick={handleSaveToProfile}
+          disabled={isSaving}
+          className={`p-3 rounded-xl transition-all ${isSaving ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+        >
+          {isSaving ? <div className="w-5 h-5 border-2 border-primary border-t-transparent animate-spin rounded-full" /> : <Save className="w-5 h-5" />}
+        </button>
       </header>
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
@@ -137,10 +149,10 @@ export default function Simulador() {
             </div>
 
             <div className="space-y-4">
-              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Aporte Mensal: {formatCurrency(aporteMensal)}</Label>
+              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Aporte Mensal: {formatCurrency(aporteMensalSimulado)}</Label>
               <Slider 
-                value={[aporteMensal]} 
-                onValueChange={(v) => setAporteMensal(v[0])} 
+                value={[aporteMensalSimulado]} 
+                onValueChange={(v) => setAporteMensalSimulado(v[0])} 
                 max={10000} 
                 min={100} 
                 step={100}
@@ -149,10 +161,10 @@ export default function Simulador() {
             </div>
 
             <div className="space-y-4">
-              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Taxa Anual Esperada: {taxaAnual}%</Label>
+              <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Taxa Anual Esperada: {taxaAnualSimulada}%</Label>
               <Slider 
-                value={[taxaAnual]} 
-                onValueChange={(v) => setTaxaAnual(v[0])} 
+                value={[taxaAnualSimulada]} 
+                onValueChange={(v) => setTaxaAnualSimulada(v[0])} 
                 max={20} 
                 min={1} 
                 step={0.5}
@@ -161,6 +173,20 @@ export default function Simulador() {
             </div>
           </div>
         </div>
+
+        {/* BOTÃO DE AÇÃO PARA SALVAR NO PERFIL */}
+        <button 
+          onClick={handleSaveToProfile}
+          disabled={isSaving}
+          className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 hover:scale-[1.02] transition-all disabled:opacity-50"
+        >
+          {isSaving ? "Salvando..." : (
+            <>
+              {isFounder ? <Sparkles className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+              Aplicar no Meu Perfil
+            </>
+          )}
+        </button>
 
         {/* BANNER DE UPGRADE - SÓ PARA FREE */}
         {!isFounder && (
