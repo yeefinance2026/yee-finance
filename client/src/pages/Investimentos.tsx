@@ -4,35 +4,35 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
 import { Link } from "wouter";
-import {
-  ChevronLeft,
-  Plus,
-  Trash2,
-  TrendingUp,
-  PieChart,
+import { 
+  ChevronLeft, 
+  Plus, 
+  Trash2, 
+  TrendingUp, 
+  PieChart, 
   Target,
   Lock,
   Crown,
   Sparkles,
-  DollarSign // ADICIONADO ESTA LINHA
+  DollarSign
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
   DialogDescription,
-  DialogTrigger,
-  DialogFooter
+  DialogTrigger, 
+  DialogFooter 
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from "@/components/ui/select";
 
 type TipoRendimento = "dividendo" | "juros";
@@ -58,9 +58,14 @@ export default function Investimentos() {
   const totalAtivos = state.investimentos.length;
   const botaoAddDisabled = !isFounder && totalAtivos >= LIMITE_FREE;
 
+  // --- LÓGICA DE CÁLCULO IGUAL À HOME ---
+  const patrimonioTotal = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
+  const metaPatrimonio = (state.numeroLiberdade * 12) / (state.taxaAnual / 100);
+  const progressoPatrimonio = Math.min((patrimonioTotal / metaPatrimonio) * 100, 100);
+
   const handleAdd = async () => {
     if (!nome || !valor) return;
-
+    
     // Bloqueio de segurança para usuários Free
     if (!isFounder && totalAtivos >= LIMITE_FREE) return;
 
@@ -78,10 +83,6 @@ export default function Investimentos() {
     setValor("");
     setIsAddOpen(false);
   };
-
-  const patrimonioTotal = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
-  const metaPatrimonio = (state.numeroLiberdade * 12) / (state.taxaAnual / 100);
-  const progressoPatrimonio = Math.min((patrimonioTotal / metaPatrimonio) * 100, 100);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -104,12 +105,13 @@ export default function Investimentos() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
-            <button
+            <button 
               disabled={botaoAddDisabled}
-              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${botaoAddDisabled
-                  ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : "bg-primary text-primary-foreground shadow-primary/20 hover:scale-105"
-                }`}
+              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${
+                botaoAddDisabled 
+                ? "bg-muted text-muted-foreground cursor-not-allowed" 
+                : "bg-primary text-primary-foreground shadow-primary/20 hover:scale-105"
+              }`}
             >
               {botaoAddDisabled ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               Novo Ativo
@@ -193,26 +195,35 @@ export default function Investimentos() {
           </Card>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="border-none bg-card shadow-sm">
-            <CardContent className="p-4 flex flex-col gap-1">
-              <div className="p-2 bg-primary/10 rounded-lg w-fit mb-2">
-                <PieChart className="w-4 h-4 text-primary" />
+        {/* CARD DE META E PATRIMÔNIO (SINCRONIZADO COM A HOME) */}
+        <Card className="border-none bg-card shadow-sm">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Patrimônio Total</p>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(patrimonioTotal)}</p>
               </div>
-              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Patrimônio</p>
-              <p className="text-lg font-bold">{formatCurrency(patrimonioTotal)}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-none bg-card shadow-sm">
-            <CardContent className="p-4 flex flex-col gap-1">
-              <div className="p-2 bg-primary/10 rounded-lg w-fit mb-2">
-                <Target className="w-4 h-4 text-primary" />
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <PieChart className="w-5 h-5 text-primary" />
               </div>
-              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Meta Final</p>
-              <p className="text-lg font-bold">{formatCurrency(metaPatrimonio)}</p>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Meta de Liberdade</p>
+                </div>
+                <span className="text-primary font-bold text-xs">{progressoPatrimonio.toFixed(1)}%</span>
+              </div>
+              <Progress value={progressoPatrimonio} className="h-2" />
+              <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                <span>Atual: {formatCurrency(patrimonioTotal)}</span>
+                <span>Alvo: {formatCurrency(metaPatrimonio)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="space-y-4">
           <div className="flex justify-between items-end">
@@ -221,7 +232,7 @@ export default function Investimentos() {
               {totalAtivos}/{isFounder ? "∞" : LIMITE_FREE} ativos ({isFounder ? "FOUNDER" : "FREE"})
             </p>
           </div>
-
+          
           <div className="space-y-3">
             {state.investimentos.map((inv) => (
               <Card key={inv.id} className="border border-border bg-card hover:bg-accent/10 transition-colors group">
@@ -243,7 +254,7 @@ export default function Investimentos() {
                         <p className="text-[10px] text-primary font-bold">{inv.taxaAnual}% a.a.</p>
                       )}
                     </div>
-                    <button
+                    <button 
                       onClick={() => removerInvestimento(inv.id)}
                       className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
                     >
