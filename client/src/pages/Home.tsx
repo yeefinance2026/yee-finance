@@ -53,7 +53,7 @@ function formatarMesAtual(): string {
 }
 
 interface Plano {
-  tipo: "free" | "fundador";
+  tipo: "free" | "founder";
 }
 
 export default function Home() {
@@ -76,6 +76,13 @@ export default function Home() {
     };
     initializeData();
   }, [loadProfileFromSupabase]);
+
+  // 🔓 Atualiza o plano quando o perfil carregar
+  useEffect(() => {
+    if (state.profile?.plan) {
+      setPlano({ tipo: state.profile.plan });
+    }
+  }, [state.profile]);
 
   // Atualiza a saudação quando o estado muda
   useEffect(() => {
@@ -167,7 +174,7 @@ export default function Home() {
   // ========== ATUALIZAR PATRIMÔNIO ==========
   const handleAtualizarPatrimonio = async () => {
     setAtualizandoPatrimonio(true);
-    
+
     const crescimento = patrimonioBase - patrimonioAnterior;
     const mesesAntigos = calcularMesesParaIndependencia(
       patrimonioAnterior,
@@ -193,7 +200,7 @@ export default function Home() {
           description: "Revise seus investimentos.",
         });
       }
-      
+
       setPatrimonioAnterior(patrimonioBase);
       setAtualizandoPatrimonio(false);
     }, 500);
@@ -398,7 +405,7 @@ export default function Home() {
               <Calendar className="w-4 h-4" />
               <span className="text-xs font-bold uppercase tracking-wider text-primary">Independência</span>
             </div>
-            
+
             <p className="text-sm font-medium">Você está a</p>
             <h3 className="text-4xl font-bold tracking-tight text-primary">
               {anos} anos
@@ -438,11 +445,10 @@ export default function Home() {
               </button>
               <button
                 onClick={() => plano.tipo === "founder" ? (setAceleradorSelecionado(500 as number | 'custom'), setAceleradorCustom(0)) : toast.info("Disponível no plano Fundador")}
-                className={`py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-1 relative ${
-                  plano.tipo === "free"
-                    ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 cursor-not-allowed'
-                    : aceleradorSelecionado === 500 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'
-                }`}
+                className={`py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-1 relative ${plano.tipo === "free"
+                  ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 cursor-not-allowed'
+                  : aceleradorSelecionado === 500 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'
+                  }`}
               >
                 +R$ 500
                 {plano.tipo === "free" && <Lock className="w-3 h-3" />}
@@ -452,13 +458,12 @@ export default function Home() {
             {/* Personalizar com bloqueio */}
             <button
               onClick={() => plano.tipo === "founder" ? setAceleradorSelecionado('custom') : toast.info("Disponível no plano Fundador")}
-              className={`w-full py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                aceleradorSelecionado === 'custom'
-                  ? 'bg-primary text-primary-foreground'
-                  : plano.tipo === "founder"
+              className={`w-full py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${aceleradorSelecionado === 'custom'
+                ? 'bg-primary text-primary-foreground'
+                : plano.tipo === "founder"
                   ? 'bg-primary/20 text-primary hover:bg-primary/30'
                   : 'bg-accent/30 text-muted-foreground cursor-not-allowed'
-              }`}
+                }`}
             >
               Personalizar
               {plano.tipo === "free" && <Lock className="w-3 h-3" />}

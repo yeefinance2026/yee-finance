@@ -20,6 +20,17 @@ export interface LancamentoDividendo {
   data: string; // ISO date string
 }
 
+export interface Profile {
+  id?: string;
+  name?: string;
+  plan?: "free" | "founder";
+  monthly_income_goal?: number;
+  current_patrimony?: number;
+  monthly_contribution?: number;
+  expected_return_rate?: number;
+  onboarding_completed?: boolean;
+}
+
 export interface FinancialState {
   investimentos: Investimento[];
   dividendos: LancamentoDividendo[];
@@ -28,4 +39,10 @@ export interface FinancialState {
   aporteMensal: number;
   taxaAnual: number;
   moeda: "BRL" | "USD" | "EUR";
+
+  profile?: Profile; // 
 }
+
+
+
+
