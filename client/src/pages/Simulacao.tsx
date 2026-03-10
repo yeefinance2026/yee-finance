@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useFinancial } from "@/state/FinancialContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +12,10 @@ import {
   RefreshCcw,
   CheckCircle2,
   PieChart,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Info,
+  Zap,
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatCurrency } from "@/lib/utils";
@@ -24,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -85,6 +88,15 @@ export default function Simulacao() {
   const diferencaAnos = Math.floor(Math.abs(diferencaMeses) / 12);
   const diferencaMesesResto = Math.abs(diferencaMeses) % 12;
 
+  // Simulação com +R$200
+  const mesesComPlus200 = (() => {
+    const m = calcularMesesParaIndependencia(
+      patrimonioSim, aporte + 200, taxaNova / 100, patrimonioNecessarioNovo
+    );
+    return isFinite(m) ? m : 0;
+  })();
+  const economiaComPlus200 = mesesNovo - mesesComPlus200;
+
   // Verifica se há mudanças em relação ao estado atual
   const temMudancas = 
     meta !== state.numeroLiberdade || 
@@ -105,6 +117,12 @@ export default function Simulacao() {
     toast.success("Configurações aplicadas à Home com sucesso!");
   };
 
+  const handlePremiumFeature = () => {
+    toast.info("Disponível no plano Fundador", {
+      description: "Desbloqueie simulações avançadas.",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <header className="p-6 flex items-center gap-4">
@@ -117,34 +135,26 @@ export default function Simulacao() {
       </header>
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
-        {/* Comparação de cenários */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* 1️⃣ CENÁRIO ATUAL */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Cenário Atual</h3>
           <Card className="border border-border bg-card">
-            <CardContent className="p-4 space-y-2">
-              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Cenário Atual</p>
-              <p className="text-lg font-bold text-primary">{dataFormatadaAtual}</p>
-              <p className="text-[10px] text-muted-foreground">{Math.floor(mesesAtual/12)}a {mesesAtual%12}m a partir de hoje</p>
-            </CardContent>
-          </Card>
-          
-          <Card className={`border ${diferencaMeses >= 0 ? 'border-primary/30 bg-primary/5' : 'border-destructive/30 bg-destructive/5'}`}>
-            <CardContent className="p-4 space-y-2">
-              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Novo Cenário</p>
-              <p className={`text-lg font-bold ${diferencaMeses >= 0 ? 'text-primary' : 'text-destructive'}`}>{dataFormatadaNova}</p>
-              {diferencaMeses !== 0 && (
-                <div className="flex items-center gap-1 text-[10px] font-bold">
-                  {diferencaMeses > 0 ? (
-                    <span className="text-primary">▲ Antecipa em {diferencaAnos > 0 ? `${diferencaAnos}a ` : ''}{diferencaMesesResto}m</span>
-                  ) : (
-                    <span className="text-destructive">▼ Atrasa em {diferencaAnos > 0 ? `${diferencaAnos}a ` : ''}{diferencaMesesResto}m</span>
-                  )}
-                </div>
-              )}
+            <CardContent className="p-6 space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Independência financeira em</p>
+                <p className="text-2xl font-bold capitalize">{dataFormatadaAtual}</p>
+              </div>
+              <div className="pt-3 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">{Math.floor(mesesAtual/12)} anos e {mesesAtual%12} meses a partir de hoje</p>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Parâmetros */}
+        {/* 2️⃣ NOVO CENÁRIO - TÍTULO */}
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Novo Cenário</h3>
+
+        {/* 3️⃣ PARÂMETROS - FREE */}
         <Card className="border border-border bg-card">
           <CardContent className="p-6 space-y-6">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -157,8 +167,8 @@ export default function Simulacao() {
                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Meta de Renda (R$/mês)</Label>
                 <Input 
                   type="number" 
-                  value={meta} 
-                  onChange={(e) => setMeta(Number(e.target.value))} 
+                  value={meta || ''} 
+                  onChange={(e) => setMeta(e.target.value === '' ? 0 : Number(e.target.value))} 
                   className="rounded-xl py-6 bg-background" 
                 />
                 {meta !== state.numeroLiberdade && (
@@ -172,8 +182,8 @@ export default function Simulacao() {
                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Patrimônio Atual (R$)</Label>
                 <Input 
                   type="number" 
-                  value={patrimonioSim} 
-                  onChange={(e) => setPatrimonioSim(Number(e.target.value))} 
+                  value={patrimonioSim || ''} 
+                  onChange={(e) => setPatrimonioSim(e.target.value === '' ? 0 : Number(e.target.value))} 
                   className="rounded-xl py-6 bg-background" 
                 />
                 {patrimonioSim !== patrimonioBase && (
@@ -187,8 +197,8 @@ export default function Simulacao() {
                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Aporte mensal (R$/mês)</Label>
                 <Input 
                   type="number" 
-                  value={aporte} 
-                  onChange={(e) => setAporte(Number(e.target.value))} 
+                  value={aporte || ''} 
+                  onChange={(e) => setAporte(e.target.value === '' ? 0 : Number(e.target.value))} 
                   className="rounded-xl py-6 bg-background" 
                 />
                 {aporte !== state.aporteMensal && (
@@ -202,8 +212,8 @@ export default function Simulacao() {
                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Aporte extra mensal (R$/mês)</Label>
                 <Input 
                   type="number" 
-                  value={aporteExtra} 
-                  onChange={(e) => setAporteExtra(Number(e.target.value))} 
+                  value={aporteExtra || ''} 
+                  onChange={(e) => setAporteExtra(e.target.value === '' ? 0 : Number(e.target.value))} 
                   className="rounded-xl py-6 bg-primary/5 border-primary/20" 
                   placeholder="Ex: 200" 
                 />
@@ -213,8 +223,8 @@ export default function Simulacao() {
                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Rentabilidade anual (%)</Label>
                 <Input 
                   type="number" 
-                  value={taxa} 
-                  onChange={(e) => setTaxa(Number(e.target.value))} 
+                  value={taxa || ''} 
+                  onChange={(e) => setTaxa(e.target.value === '' ? 0 : Number(e.target.value))} 
                   className="rounded-xl py-6 bg-background" 
                 />
                 {taxa !== state.taxaAnual && (
@@ -227,10 +237,10 @@ export default function Simulacao() {
           </CardContent>
         </Card>
 
-        {/* Resumo do Novo Cenário */}
+        {/* 4️⃣ RESULTADO DA SIMULAÇÃO */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Resumo do Novo Cenário</h3>
-          <Card className="border border-border bg-card">
+          <Card className="border-none bg-primary/10">
             <CardContent className="p-6 space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Capital necessário</span>
@@ -238,24 +248,47 @@ export default function Simulacao() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Capital simulado</span>
-                <span className="font-bold">{formatCurrency(patrimonioSim)}</span>
+                <span className="font-bold text-primary">{formatCurrency(patrimonioSim)}</span>
               </div>
               <div className="flex justify-between items-center pt-4 border-t border-border/50">
                 <span className="text-sm font-bold">Independência em</span>
-                <span className="font-bold text-primary text-lg">{dataFormatadaNova}</span>
+                <span className="font-bold text-primary text-lg capitalize">{dataFormatadaNova}</span>
+              </div>
+
+              {/* Impacto de +R$200 */}
+              {economiaComPlus200 > 0 && (
+                <div className="pt-4 border-t border-border/50 bg-green-500/5 -mx-6 -mb-6 px-6 py-4 rounded-b-lg space-y-1">
+                  <p className="text-xs text-green-600 font-bold">💡 Com +R$200 por mês</p>
+                  <p className="text-sm text-green-600 font-bold">
+                    você anteciparia sua liberdade em {Math.floor(economiaComPlus200 / 12)} anos
+                  </p>
+                </div>
+              )}
+
+              {/* Metodologia */}
+              <div className="pt-4 border-t border-border/50 space-y-2">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-muted-foreground italic">
+                    Simulação baseada em rendimento médio de {taxa}% ao ano com reinvestimento dos rendimentos.
+                  </p>
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">
+                  Resultados podem variar conforme o mercado.
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Botão de aplicar à Home */}
+        {/* 5️⃣ BOTÃO APLICAR CENÁRIO */}
         {temMudancas && (
           <button
             onClick={handleAplicar}
-            className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+            className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-primary/30 transition-all"
           >
             <CheckCircle2 className="w-5 h-5" />
-            Aplicar à Home
+            Aplicar Cenário à Home
           </button>
         )}
 
@@ -266,6 +299,62 @@ export default function Simulacao() {
             </p>
           </div>
         )}
+
+        {/* 🟡 SIMULAÇÃO AVANÇADA - FUNDADOR */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Lock className="w-4 h-4 text-yellow-600" />
+            Simulação Avançada
+          </h3>
+
+          <button onClick={handlePremiumFeature} className="w-full">
+            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-yellow-600">Comparar Cenários</span>
+                  <Lock className="w-4 h-4 text-yellow-600" />
+                </div>
+                <p className="text-[10px] text-yellow-600/70">Veja lado a lado diferentes estratégias</p>
+              </CardContent>
+            </Card>
+          </button>
+
+          <button onClick={handlePremiumFeature} className="w-full">
+            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-yellow-600">Simular Aumento de Aportes</span>
+                  <Lock className="w-4 h-4 text-yellow-600" />
+                </div>
+                <p className="text-[10px] text-yellow-600/70">Teste aumentos progressivos de investimento</p>
+              </CardContent>
+            </Card>
+          </button>
+
+          <button onClick={handlePremiumFeature} className="w-full">
+            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-yellow-600">Simular Reinvestimento</span>
+                  <Lock className="w-4 h-4 text-yellow-600" />
+                </div>
+                <p className="text-[10px] text-yellow-600/70">Veja o impacto dos juros compostos</p>
+              </CardContent>
+            </Card>
+          </button>
+
+          <button onClick={handlePremiumFeature} className="w-full">
+            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-yellow-600">Simular Inflação</span>
+                  <Lock className="w-4 h-4 text-yellow-600" />
+                </div>
+                <p className="text-[10px] text-yellow-600/70">Ajuste para inflação futura</p>
+              </CardContent>
+            </Card>
+          </button>
+        </div>
       </main>
 
       {/* Modal de Confirmação */}
@@ -274,57 +363,37 @@ export default function Simulacao() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-primary" />
-              Confirmar alterações
+              Aplicar Cenário?
             </DialogTitle>
+            <DialogDescription className="sr-only">Confirme se deseja aplicar este cenário à sua Home.</DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              As seguintes configurações serão aplicadas à tela Home:
-            </p>
-            <div className="space-y-2 bg-accent/30 rounded-xl p-4">
-              {meta !== state.numeroLiberdade && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Meta de renda</span>
-                  <span className="font-bold text-primary">{formatCurrency(meta)}/mês</span>
-                </div>
-              )}
-              {patrimonioSim !== patrimonioBase && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Patrimônio atual</span>
-                  <span className="font-bold text-primary">{formatCurrency(patrimonioSim)}</span>
-                </div>
-              )}
-              {aporte !== state.aporteMensal && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Aporte mensal</span>
-                  <span className="font-bold text-primary">{formatCurrency(aporte)}/mês</span>
-                </div>
-              )}
-              {taxa !== state.taxaAnual && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Rentabilidade</span>
-                  <span className="font-bold text-primary">{taxa}% a.a.</span>
-                </div>
-              )}
+          <div className="py-6 space-y-4">
+            <div className="bg-primary/5 rounded-xl p-4 space-y-2">
+              <p className="text-xs text-muted-foreground">Seus parâmetros serão atualizados para:</p>
+              <div className="space-y-1 text-sm font-bold">
+                <p>Meta: {formatCurrency(meta)}/mês</p>
+                <p>Patrimônio: {formatCurrency(patrimonioSim)}</p>
+                <p>Aporte: {formatCurrency(aporte)}/mês</p>
+                <p>Taxa: {taxa}% a.a.</p>
+              </div>
             </div>
           </div>
           <DialogFooter className="gap-3">
             <button
               onClick={() => setIsConfirmOpen(false)}
-              className="flex-1 py-3 border border-border rounded-2xl font-bold text-sm text-muted-foreground hover:bg-accent/30 transition-colors"
+              className="flex-1 py-3 border border-border rounded-xl font-bold hover:bg-accent transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={handleConfirmar}
-              className="flex-1 py-3 bg-primary text-primary-foreground rounded-2xl font-bold text-sm shadow-lg shadow-primary/20"
+              className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
             >
               Confirmar
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
