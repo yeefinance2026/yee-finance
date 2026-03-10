@@ -437,7 +437,7 @@ export default function Home() {
                 +R$ 200
               </button>
               <button
-                onClick={() => plano.tipo === "fundador" ? (setAceleradorSelecionado(500 as number | 'custom'), setAceleradorCustom(0)) : toast.info("Disponível no plano Fundador")}
+                onClick={() => plano.tipo === "founder" ? (setAceleradorSelecionado(500 as number | 'custom'), setAceleradorCustom(0)) : toast.info("Disponível no plano Fundador")}
                 className={`py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-1 relative ${
                   plano.tipo === "free"
                     ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 cursor-not-allowed'
@@ -451,11 +451,11 @@ export default function Home() {
 
             {/* Personalizar com bloqueio */}
             <button
-              onClick={() => plano.tipo === "fundador" ? setAceleradorSelecionado('custom') : toast.info("Disponível no plano Fundador")}
+              onClick={() => plano.tipo === "founder" ? setAceleradorSelecionado('custom') : toast.info("Disponível no plano Fundador")}
               className={`w-full py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                 aceleradorSelecionado === 'custom'
                   ? 'bg-primary text-primary-foreground'
-                  : plano.tipo === "fundador"
+                  : plano.tipo === "founder"
                   ? 'bg-primary/20 text-primary hover:bg-primary/30'
                   : 'bg-accent/30 text-muted-foreground cursor-not-allowed'
               }`}
