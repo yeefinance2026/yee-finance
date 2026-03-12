@@ -31,7 +31,9 @@ import {
 import { toast } from "sonner";
 
 export default function Simulacao() {
-  const { state, setNumeroLiberdade, setAporteMensal, setTaxaAnual, setPatrimonioAtual } = useFinancial();
+    const { state, setNumeroLiberdade, setAporteMensal, setTaxaAnual, setPatrimonioAtual } = useFinancial();
+  const planoTipo = state.profile?.plan || "free";
+  const isFounder = planoTipo === "founder";
   
   // Simulation parameters (local, não afetam a home até confirmar)
   const [meta, setMeta] = useState(state.numeroLiberdade);
@@ -118,9 +120,11 @@ export default function Simulacao() {
   };
 
   const handlePremiumFeature = () => {
-    toast.info("Disponível no plano Fundador", {
+    if (!isFounder) {
+      toast.info("Disponível apenas para o plano Fundador", {
       description: "Desbloqueie simulações avançadas.",
-    });
+      });
+    }
   };
 
   return (
@@ -301,60 +305,71 @@ export default function Simulacao() {
         )}
 
         {/* 🟡 SIMULAÇÃO AVANÇADA - FUNDADOR */}
-        <div className="space-y-4 pt-4 border-t border-border">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Lock className="w-4 h-4 text-yellow-600" />
-            Simulação Avançada
-          </h3>
+        {!isFounder && (
+          <Card className="border border-yellow-500/30 bg-yellow-500/5">
+            <CardContent className="p-4 space-y-2 text-center">
+              <Lock className="w-6 h-6 text-yellow-600 mx-auto" />
+              <p className="text-sm font-bold uppercase text-yellow-600">Simulações Avançadas</p>
+              <p className="text-xs text-yellow-600/70">Disponível apenas para o plano Fundador</p>
+            </CardContent>
+          </Card>
+        )}
+        {isFounder && (
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Lock className="w-4 h-4 text-yellow-600" />
+              Simulação Avançada
+            </h3>
 
-          <button onClick={handlePremiumFeature} className="w-full">
-            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase text-yellow-600">Comparar Cenários</span>
-                  <Lock className="w-4 h-4 text-yellow-600" />
-                </div>
-                <p className="text-[10px] text-yellow-600/70">Veja lado a lado diferentes estratégias</p>
-              </CardContent>
-            </Card>
-          </button>
+            <button onClick={handlePremiumFeature} className="w-full">
+              <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase text-yellow-600">Comparar Cenários</span>
+                    <Lock className="w-4 h-4 text-yellow-600" />
+                  </div>
+                  <p className="text-[10px] text-yellow-600/70">Veja lado a lado diferentes estratégias</p>
+                </CardContent>
+              </Card>
+            </button>
 
-          <button onClick={handlePremiumFeature} className="w-full">
-            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase text-yellow-600">Simular Aumento de Aportes</span>
-                  <Lock className="w-4 h-4 text-yellow-600" />
-                </div>
-                <p className="text-[10px] text-yellow-600/70">Teste aumentos progressivos de investimento</p>
-              </CardContent>
-            </Card>
-          </button>
+            <button onClick={handlePremiumFeature} className="w-full">
+              <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase text-yellow-600">Simular Aumento de Aportes</span>
+                    <Lock className="w-4 h-4 text-yellow-600" />
+                  </div>
+                  <p className="text-[10px] text-yellow-600/70">Teste aumentos progressivos de investimento</p>
+                </CardContent>
+              </Card>
+            </button>
 
-          <button onClick={handlePremiumFeature} className="w-full">
-            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase text-yellow-600">Simular Reinvestimento</span>
-                  <Lock className="w-4 h-4 text-yellow-600" />
-                </div>
-                <p className="text-[10px] text-yellow-600/70">Veja o impacto dos juros compostos</p>
-              </CardContent>
-            </Card>
-          </button>
+            <button onClick={handlePremiumFeature} className="w-full">
+              <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase text-yellow-600">Simular Reinvestimento</span>
+                    <Lock className="w-4 h-4 text-yellow-600" />
+                  </div>
+                  <p className="text-[10px] text-yellow-600/70">Veja o impacto dos juros compostos</p>
+                </CardContent>
+              </Card>
+            </button>
 
-          <button onClick={handlePremiumFeature} className="w-full">
-            <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase text-yellow-600">Simular Inflação</span>
-                  <Lock className="w-4 h-4 text-yellow-600" />
-                </div>
-                <p className="text-[10px] text-yellow-600/70">Ajuste para inflação futura</p>
-              </CardContent>
-            </Card>
-          </button>
-        </div>
+            <button onClick={handlePremiumFeature} className="w-full">
+              <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase text-yellow-600">Simular Inflação</span>
+                    <Lock className="w-4 h-4 text-yellow-600" />
+                  </div>
+                  <p className="text-[10px] text-yellow-600/70">Ajuste para inflação futura</p>
+                </CardContent>
+              </Card>
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Modal de Confirmação */}
