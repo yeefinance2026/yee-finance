@@ -321,7 +321,7 @@ export default function Simulacao() {
               Simulação Avançada
             </h3>
 
-            <button onClick={handlePremiumFeature} className="w-full">
+            <button className="w-full">
               <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -333,7 +333,7 @@ export default function Simulacao() {
               </Card>
             </button>
 
-            <button onClick={handlePremiumFeature} className="w-full">
+            <button className="w-full">
               <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -345,7 +345,7 @@ export default function Simulacao() {
               </Card>
             </button>
 
-            <button onClick={handlePremiumFeature} className="w-full">
+            <button className="w-full">
               <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -357,7 +357,7 @@ export default function Simulacao() {
               </Card>
             </button>
 
-            <button onClick={handlePremiumFeature} className="w-full">
+            <button className="w-full">
               <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
