@@ -16,6 +16,8 @@ import {
   Lock,
   Info,
   Zap,
+  BarChart3,
+  TrendingDown,
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatCurrency } from "@/lib/utils";
@@ -31,7 +33,7 @@ import {
 import { toast } from "sonner";
 
 export default function Simulacao() {
-    const { state, setNumeroLiberdade, setAporteMensal, setTaxaAnual, setPatrimonioAtual } = useFinancial();
+  const { state, setNumeroLiberdade, setAporteMensal, setTaxaAnual, setPatrimonioAtual } = useFinancial();
   const planoTipo = state.profile?.plan || "free";
   const isFounder = planoTipo === "founder";
   
@@ -48,6 +50,17 @@ export default function Simulacao() {
 
   // Modal de confirmação
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  
+  // Modais das funcionalidades Founder
+  const [isComparadorOpen, setIsComparadorOpen] = useState(false);
+  const [isAumentosOpen, setIsAumentosOpen] = useState(false);
+  const [isReinvestimentoOpen, setIsReinvestimentoOpen] = useState(false);
+  const [isInflacaoOpen, setIsInflacaoOpen] = useState(false);
+  
+  // Estados para simulações avançadas
+  const [cenarioComparacao, setCenarioComparacao] = useState({ meta: meta, aporte: aporte, taxa: taxa });
+  const [aumentoProgressivo, setAumentoProgressivo] = useState(10); // percentual de aumento
+  const [taxaInflacao, setTaxaInflacao] = useState(3.5); // taxa de inflação anual
 
   const totalInvestido = state.investimentos.reduce((acc, inv) => acc + (inv.valor || 0), 0);
   const patrimonioBase = (state.patrimonioAtual && state.patrimonioAtual > 0) 
@@ -106,6 +119,64 @@ export default function Simulacao() {
     taxa !== state.taxaAnual ||
     patrimonioSim !== patrimonioBase;
 
+  // ===== FUNCIONALIDADES FOUNDER =====
+  
+  // Comparar Cenários
+  const handleComparadorCenarios = () => {
+    if (!isFounder) {
+      toast.error("Funcionalidade exclusiva do plano Fundador");
+      return;
+    }
+    setIsComparadorOpen(true);
+  };
+
+  // Simular Aumento de Aportes
+  const handleAumentoAportes = () => {
+    if (!isFounder) {
+      toast.error("Funcionalidade exclusiva do plano Fundador");
+      return;
+    }
+    setIsAumentosOpen(true);
+  };
+
+  // Simular Reinvestimento
+  const handleReinvestimento = () => {
+    if (!isFounder) {
+      toast.error("Funcionalidade exclusiva do plano Fundador");
+      return;
+    }
+    setIsReinvestimentoOpen(true);
+  };
+
+  // Simular Inflação
+  const handleInflacao = () => {
+    if (!isFounder) {
+      toast.error("Funcionalidade exclusiva do plano Fundador");
+      return;
+    }
+    setIsInflacaoOpen(true);
+  };
+
+  // Cálculos para Aumento Progressivo
+  const mesesComAumento = (() => {
+    const aporteAumentado = aporte * (1 + aumentoProgressivo / 100);
+    const m = calcularMesesParaIndependencia(
+      patrimonioSim, aporteAumentado, taxaNova / 100, patrimonioNecessarioNovo
+    );
+    return isFinite(m) ? m : 0;
+  })();
+  const economiaAumento = mesesNovo - mesesComAumento;
+
+  // Cálculos para Inflação
+  const metaComInflacao = metaNova * Math.pow(1 + taxaInflacao / 100, 10); // Projeção 10 anos
+  const patrimonioNecessarioComInflacao = metaComInflacao > 0 ? metaComInflacao / taxaMensalPadrao : 0;
+  const mesesComInflacao = (() => {
+    const m = calcularMesesParaIndependencia(
+      patrimonioSim, aporte + aporteExtra, taxaNova / 100, patrimonioNecessarioComInflacao
+    );
+    return isFinite(m) ? m : 0;
+  })();
+
   const handleAplicar = () => {
     setIsConfirmOpen(true);
   };
@@ -119,14 +190,6 @@ export default function Simulacao() {
     toast.success("Configurações aplicadas à Home com sucesso!");
   };
 
-  const handlePremiumFeature = () => {
-    if (!isFounder) {
-      toast.info("Disponível apenas para o plano Fundador", {
-      description: "Desbloqueie simulações avançadas.",
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background pb-24">
       <header className="p-6 flex items-center gap-4">
@@ -136,6 +199,12 @@ export default function Simulacao() {
           </button>
         </Link>
         <h1 className="text-xl font-bold">Simulador</h1>
+        {isFounder && (
+          <div className="ml-auto flex items-center gap-2 px-3 py-1 bg-yellow-500/10 rounded-full">
+            <Zap className="w-4 h-4 text-yellow-600" />
+            <span className="text-xs font-bold text-yellow-600">Fundador</span>
+          </div>
+        )}
       </header>
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
@@ -314,55 +383,60 @@ export default function Simulacao() {
             </CardContent>
           </Card>
         )}
+        
         {isFounder && (
           <div className="space-y-4 pt-4 border-t border-border">
             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Lock className="w-4 h-4 text-yellow-600" />
-              Simulação Avançada
+              <Zap className="w-4 h-4 text-yellow-600" />
+              Simulação Avançada - Fundador
             </h3>
 
-            <button className="w-full">
+            {/* Comparar Cenários */}
+            <button onClick={handleComparadorCenarios} className="w-full">
               <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase text-yellow-600">Comparar Cenários</span>
-                    <Lock className="w-4 h-4 text-yellow-600" />
+                    <BarChart3 className="w-4 h-4 text-yellow-600" />
                   </div>
                   <p className="text-[10px] text-yellow-600/70">Veja lado a lado diferentes estratégias</p>
                 </CardContent>
               </Card>
             </button>
 
-            <button className="w-full">
+            {/* Simular Aumento de Aportes */}
+            <button onClick={handleAumentoAportes} className="w-full">
               <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase text-yellow-600">Simular Aumento de Aportes</span>
-                    <Lock className="w-4 h-4 text-yellow-600" />
+                    <TrendingUp className="w-4 h-4 text-yellow-600" />
                   </div>
                   <p className="text-[10px] text-yellow-600/70">Teste aumentos progressivos de investimento</p>
                 </CardContent>
               </Card>
             </button>
 
-            <button className="w-full">
+            {/* Simular Reinvestimento */}
+            <button onClick={handleReinvestimento} className="w-full">
               <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase text-yellow-600">Simular Reinvestimento</span>
-                    <Lock className="w-4 h-4 text-yellow-600" />
+                    <RefreshCcw className="w-4 h-4 text-yellow-600" />
                   </div>
                   <p className="text-[10px] text-yellow-600/70">Veja o impacto dos juros compostos</p>
                 </CardContent>
               </Card>
             </button>
 
-            <button className="w-full">
+            {/* Simular Inflação */}
+            <button onClick={handleInflacao} className="w-full">
               <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase text-yellow-600">Simular Inflação</span>
-                    <Lock className="w-4 h-4 text-yellow-600" />
+                    <TrendingDown className="w-4 h-4 text-yellow-600" />
                   </div>
                   <p className="text-[10px] text-yellow-600/70">Ajuste para inflação futura</p>
                 </CardContent>
@@ -405,6 +479,225 @@ export default function Simulacao() {
               className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
             >
               Confirmar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== MODAIS FOUNDER ===== */}
+
+      {/* Modal: Comparar Cenários */}
+      <Dialog open={isComparadorOpen} onOpenChange={setIsComparadorOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-yellow-600" />
+              Comparar Cenários
+            </DialogTitle>
+            <DialogDescription>Analise lado a lado diferentes estratégias de investimento</DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="border border-border bg-card">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground">Cenário Atual</p>
+                  <p className="text-lg font-bold">{formatCurrency(patrimonioBase)}</p>
+                  <p className="text-xs text-muted-foreground">Capital</p>
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-sm font-bold text-primary">{Math.floor(mesesAtual/12)} anos</p>
+                    <p className="text-xs text-muted-foreground">até independência</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border border-yellow-500/30 bg-yellow-500/5">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs font-bold text-yellow-600">Novo Cenário</p>
+                  <p className="text-lg font-bold text-yellow-600">{formatCurrency(patrimonioSim)}</p>
+                  <p className="text-xs text-yellow-600/70">Capital</p>
+                  <div className="pt-2 border-t border-yellow-500/20">
+                    <p className="text-sm font-bold text-yellow-600">{Math.floor(mesesNovo/12)} anos</p>
+                    <p className="text-xs text-yellow-600/70">até independência</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="bg-green-500/5 rounded-xl p-4">
+              <p className="text-sm font-bold text-green-600">
+                Economia: {diferencaAnos} anos e {diferencaMesesResto} meses
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setIsComparadorOpen(false)}
+              className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold"
+            >
+              Fechar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Aumento de Aportes */}
+      <Dialog open={isAumentosOpen} onOpenChange={setIsAumentosOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-yellow-600" />
+              Simular Aumento de Aportes
+            </DialogTitle>
+            <DialogDescription>Teste aumentos progressivos no seu aporte mensal</DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase">Aumento percentual: {aumentoProgressivo}%</Label>
+              <Input 
+                type="range" 
+                min="0" 
+                max="50" 
+                value={aumentoProgressivo}
+                onChange={(e) => setAumentoProgressivo(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="border border-border bg-card">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground">Aporte Atual</p>
+                  <p className="text-lg font-bold">{formatCurrency(aporte)}/mês</p>
+                  <p className="text-xs text-muted-foreground">Tempo até liberdade</p>
+                  <p className="text-sm font-bold text-primary">{Math.floor(mesesNovo/12)} anos</p>
+                </CardContent>
+              </Card>
+              <Card className="border border-yellow-500/30 bg-yellow-500/5">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs font-bold text-yellow-600">Com Aumento</p>
+                  <p className="text-lg font-bold text-yellow-600">{formatCurrency(aporte * (1 + aumentoProgressivo / 100))}/mês</p>
+                  <p className="text-xs text-yellow-600/70">Tempo até liberdade</p>
+                  <p className="text-sm font-bold text-yellow-600">{Math.floor(mesesComAumento/12)} anos</p>
+                </CardContent>
+              </Card>
+            </div>
+            {economiaAumento > 0 && (
+              <div className="bg-green-500/5 rounded-xl p-4">
+                <p className="text-sm font-bold text-green-600">
+                  Economia: {Math.floor(economiaAumento / 12)} anos e {economiaAumento % 12} meses
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setIsAumentosOpen(false)}
+              className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold"
+            >
+              Fechar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Reinvestimento */}
+      <Dialog open={isReinvestimentoOpen} onOpenChange={setIsReinvestimentoOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <RefreshCcw className="w-5 h-5 text-yellow-600" />
+              Simular Reinvestimento
+            </DialogTitle>
+            <DialogDescription>Veja o impacto dos juros compostos em seu patrimônio</DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <Card className="border border-yellow-500/30 bg-yellow-500/5">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-yellow-600/70">Taxa de rentabilidade</span>
+                  <span className="font-bold text-yellow-600">{taxa}% a.a.</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-yellow-600/70">Aporte mensal</span>
+                  <span className="font-bold text-yellow-600">{formatCurrency(aporte)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-yellow-500/20">
+                  <span className="text-sm font-bold text-yellow-600">Patrimônio em 10 anos</span>
+                  <span className="font-bold text-yellow-600 text-lg">
+                    {formatCurrency(patrimonioSim + (aporte * 12 * 10 * (1 + taxa / 100)))}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+            <div className="bg-blue-500/5 rounded-xl p-4">
+              <p className="text-xs text-blue-600 font-bold mb-2">💡 Efeito dos Juros Compostos</p>
+              <p className="text-sm text-blue-600">
+                Com reinvestimento dos rendimentos, seu patrimônio crescerá exponencialmente, acelerando sua independência financeira.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setIsReinvestimentoOpen(false)}
+              className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold"
+            >
+              Fechar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Inflação */}
+      <Dialog open={isInflacaoOpen} onOpenChange={setIsInflacaoOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <TrendingDown className="w-5 h-5 text-yellow-600" />
+              Simular Inflação
+            </DialogTitle>
+            <DialogDescription>Ajuste sua meta para a inflação futura</DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase">Taxa de inflação anual: {taxaInflacao}%</Label>
+              <Input 
+                type="range" 
+                min="0" 
+                max="10" 
+                step="0.5"
+                value={taxaInflacao}
+                onChange={(e) => setTaxaInflacao(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="border border-border bg-card">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground">Meta Atual</p>
+                  <p className="text-lg font-bold">{formatCurrency(metaNova)}/mês</p>
+                  <p className="text-xs text-muted-foreground">Poder de compra hoje</p>
+                </CardContent>
+              </Card>
+              <Card className="border border-red-500/30 bg-red-500/5">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs font-bold text-red-600">Meta em 10 anos</p>
+                  <p className="text-lg font-bold text-red-600">{formatCurrency(metaComInflacao)}/mês</p>
+                  <p className="text-xs text-red-600/70">Considerando inflação</p>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="bg-orange-500/5 rounded-xl p-4">
+              <p className="text-sm font-bold text-orange-600">
+                Meses até independência: {Math.floor(mesesComInflacao/12)} anos
+              </p>
+              <p className="text-xs text-orange-600/70 mt-1">
+                Com ajuste para inflação de {taxaInflacao}% ao ano
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setIsInflacaoOpen(false)}
+              className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold"
+            >
+              Fechar
             </button>
           </DialogFooter>
         </DialogContent>
