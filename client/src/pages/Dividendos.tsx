@@ -38,6 +38,10 @@ export default function Dividendos() {
   const { state, adicionarDividendo, removerDividendo } = useFinancial();
   const [isAddOpen, setIsAddOpen] = useState(false);
   
+  // --- LÓGICA DE PLANO ---
+  const planoTipo = state.profile?.plan || "free";
+  const isFounder = planoTipo === "founder";
+
   const [investimentoSelecionado, setInvestimentoSelecionado] = useState("");
   const [valorDividendo, setValorDividendo] = useState("");
   const [dataLancamento, setDataLancamento] = useState(new Date().toISOString().split('T')[0]);
@@ -136,6 +140,7 @@ export default function Dividendos() {
   };
 
   const handlePremiumFeature = () => {
+    if (isFounder) return;
     toast.info("Disponível no plano Fundador", {
       description: "Desbloqueie análises avançadas e projeções.",
     });
@@ -150,7 +155,14 @@ export default function Dividendos() {
               <ChevronLeft className="w-6 h-6" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold">Dividendos</h1>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold">Dividendos</h1>
+            {isFounder && (
+              <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold flex items-center gap-1 w-fit">
+                <Zap className="w-2 h-2" /> PLANO FUNDADOR
+              </span>
+            )}
+          </div>
         </div>
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -237,12 +249,12 @@ export default function Dividendos() {
         )}
 
         {/* 🟡 FUNDADOR: RENDA MÉDIA MENSAL */}
-        <button onClick={handlePremiumFeature} className="w-full">
-          <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
-            <CardContent className="p-6 space-y-2">
+        <button onClick={handlePremiumFeature} className={`w-full ${isFounder ? "cursor-default" : "cursor-pointer"}`}>
+          <Card className={`border border-yellow-500/30 bg-yellow-500/5 ${!isFounder && "hover:bg-yellow-500/10"} transition-colors`}>
+            <CardContent className="p-6 space-y-2 text-left">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold uppercase tracking-widest text-yellow-600">Renda Média Mensal</p>
-                <Lock className="w-4 h-4 text-yellow-600" />
+                {!isFounder && <Lock className="w-4 h-4 text-yellow-600" />}
               </div>
               <h2 className="text-4xl font-bold text-yellow-600">≈ {formatCurrency(rendaPassivaMediaTotal)}</h2>
               <p className="text-[10px] text-yellow-600/70 italic">
@@ -253,12 +265,12 @@ export default function Dividendos() {
         </button>
 
         {/* 🟡 FUNDADOR: COBERTURA DA LIBERDADE */}
-        <button onClick={handlePremiumFeature} className="w-full">
+        <button onClick={handlePremiumFeature} className={`w-full ${isFounder ? "cursor-default" : "cursor-pointer"}`}>
           <Card className="border-none bg-yellow-500/5 overflow-hidden relative">
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="p-6 space-y-4 text-left">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold uppercase tracking-widest text-yellow-600">Cobertura da Liberdade</p>
-                <Lock className="w-4 h-4 text-yellow-600" />
+                {!isFounder && <Lock className="w-4 h-4 text-yellow-600" />}
               </div>
 
               <div className="space-y-1">
@@ -268,8 +280,8 @@ export default function Dividendos() {
               
               <div className="space-y-2">
                 <Progress value={progresso} className="h-2 bg-yellow-500/20" />
-                <div className="flex justify-between text-xs font-bold text-yellow-600/70">
-                  <span>{formatCurrency(rendaPassivaMediaTotal)}</span>
+                <div className="flex justify-between text-[10px] text-yellow-600/70 font-bold uppercase tracking-widest">
+                  <span>Atual</span>
                   <span>{formatCurrency(metaMensal)}</span>
                 </div>
               </div>
@@ -278,12 +290,12 @@ export default function Dividendos() {
         </button>
 
         {/* 🟡 FUNDADOR: ESTIMATIVA RENDA FIXA */}
-        <button onClick={handlePremiumFeature} className="w-full">
-          <Card className="border border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors cursor-pointer">
-            <CardContent className="p-6 space-y-3">
+        <button onClick={handlePremiumFeature} className={`w-full ${isFounder ? "cursor-default" : "cursor-pointer"}`}>
+          <Card className={`border border-yellow-500/30 bg-yellow-500/5 ${!isFounder && "hover:bg-yellow-500/10"} transition-colors`}>
+            <CardContent className="p-6 space-y-3 text-left">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold uppercase tracking-widest text-yellow-600">Estimativa Renda Fixa</p>
-                <Lock className="w-4 h-4 text-yellow-600" />
+                {!isFounder && <Lock className="w-4 h-4 text-yellow-600" />}
               </div>
               <p className="text-3xl font-bold text-yellow-600">≈ {formatCurrency(rendaJurosMensal)}</p>
               <p className="text-[10px] text-yellow-600/70">Valor estimado com base nos investimentos atuais.</p>
@@ -309,7 +321,7 @@ export default function Dividendos() {
                       <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <BarChart2 className="w-5 h-5 text-primary" />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 text-left">
                         <p className="font-bold text-sm">{d.investimentoNome}</p>
                         <p className="text-[10px] text-muted-foreground">Dividendo recebido</p>
                       </div>

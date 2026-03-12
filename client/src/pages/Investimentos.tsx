@@ -12,7 +12,7 @@ import {
   PieChart, 
   Target,
   Lock,
-  Crown,
+  Zap,
   Sparkles,
   DollarSign,
   AlertCircle
@@ -179,7 +179,7 @@ export default function Investimentos() {
             <h1 className="text-xl font-bold">Meus Ativos</h1>
             {isFounder && (
               <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold flex items-center gap-1 w-fit">
-                <Crown className="w-2 h-2" /> PLANO FOUNDER
+                <Zap className="w-2 h-2" /> PLANO FUNDADOR
               </span>
             )}
           </div>
@@ -263,7 +263,7 @@ export default function Investimentos() {
                 <div className="space-y-1">
                   <p className="text-sm font-bold text-primary">Limite de Ativos Atingido</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Você atingiu o limite de {LIMITE_FREE} ativos do plano gratuito. Desbloqueie o acesso ilimitado agora.
+                    Você atingiu o limite de {LIMITE_FREE} ativos no plano gratuito.
                   </p>
                 </div>
               </div>
@@ -347,7 +347,7 @@ export default function Investimentos() {
           <div className="flex justify-between items-end">
             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sua Carteira</h3>
             <p className="text-[10px] font-bold text-muted-foreground">
-              {totalAtivos}/{isFounder ? "∞" : LIMITE_FREE} ativos ({isFounder ? "FOUNDER" : "FREE"})
+              {totalAtivos}/{isFounder ? "∞" : LIMITE_FREE} ativos ({isFounder ? "FUNDADOR" : "FREE"})
             </p>
           </div>
           
