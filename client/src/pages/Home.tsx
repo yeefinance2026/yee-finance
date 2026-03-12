@@ -59,7 +59,7 @@ interface Plano {
 export default function Home() {
   const { state, loadProfileFromSupabase } = useFinancial();
   const [forceUpdate, setForceUpdate] = useState(0);
-  const [aceleradorCustom, setAceleradorCustom] = useState(0);
+  const [aceleradorCustom, setAceleradorCustom] = useState<string>("");
   const [aceleradorSelecionado, setAceleradorSelecionado] = useState<number | 'custom'>(200);
   const [isLoading, setIsLoading] = useState(true);
   const [greeting, setGreeting] = useState({ greeting: "", emoji: "" });
@@ -207,7 +207,7 @@ export default function Home() {
   };
 
   // Acelerador
-  const valorAcelerador = aceleradorSelecionado === 'custom' ? aceleradorCustom : (aceleradorSelecionado as number);
+  const valorAcelerador = aceleradorSelecionado === 'custom' ? Number(aceleradorCustom || 0) : (aceleradorSelecionado as number);
   const mesesComAcelerador = calcularMesesParaIndependencia(
     patrimonioBase,
     aporteMensalSeguro + valorAcelerador,
@@ -247,7 +247,14 @@ export default function Home() {
       <header className="p-6 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold">Y</div>
-          <h1 className="text-xl font-bold tracking-tight">Yee Finance</h1>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold tracking-tight">Yee Finance</h1>
+            {plano.tipo === "founder" && (
+              <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold flex items-center gap-1 w-fit">
+                <Zap className="w-2 h-2" /> PLANO FUNDADOR
+              </span>
+            )}
+          </div>
         </div>
         <Link href="/configuracoes">
           <button className="p-2 hover:bg-accent rounded-full transition-colors">
@@ -270,7 +277,6 @@ export default function Home() {
         {/* NÚMERO DOMINANTE - SEM DUPLICAÇÃO */}
         <section className="text-center space-y-4 py-4">
           <div className="space-y-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Número Dominante</p>
             <h2 className="text-6xl font-bold tracking-tighter text-primary">
               {progresso.toFixed(1)}%
             </h2>
@@ -432,19 +438,19 @@ export default function Home() {
 
             <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={() => { setAceleradorSelecionado(100 as number | 'custom'); setAceleradorCustom(0); }}
+                onClick={() => { setAceleradorSelecionado(100 as number | 'custom'); setAceleradorCustom(""); }}
                 className={`py-2 px-3 rounded-lg font-bold text-sm transition-all ${aceleradorSelecionado === 100 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'}`}
               >
                 +R$ 100
               </button>
               <button
-                onClick={() => { setAceleradorSelecionado(200 as number | 'custom'); setAceleradorCustom(0); }}
+                onClick={() => { setAceleradorSelecionado(200 as number | 'custom'); setAceleradorCustom(""); }}
                 className={`py-2 px-3 rounded-lg font-bold text-sm transition-all ${aceleradorSelecionado === 200 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'}`}
               >
                 +R$ 200
               </button>
               <button
-                onClick={() => plano.tipo === "founder" ? (setAceleradorSelecionado(500 as number | 'custom'), setAceleradorCustom(0)) : toast.info("Disponível no plano Fundador")}
+                onClick={() => plano.tipo === "founder" ? (setAceleradorSelecionado(500 as number | 'custom'), setAceleradorCustom("")) : toast.info("Disponível no plano Fundador")}
                 className={`py-2 px-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-1 relative ${plano.tipo === "free"
                   ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 cursor-not-allowed'
                   : aceleradorSelecionado === 500 ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary hover:bg-primary/30'
@@ -474,9 +480,9 @@ export default function Home() {
                 <input
                   type="number"
                   value={aceleradorCustom}
-                  onChange={(e) => setAceleradorCustom(Math.max(0, Number(e.target.value)))}
-                  className="w-full px-3 py-2 bg-primary/10 border border-primary/30 rounded-lg text-primary font-bold"
-                  placeholder="Valor personalizado"
+                  onChange={(e) => setAceleradorCustom(e.target.value)}
+                  className="w-full px-3 py-2 bg-primary/10 border border-primary/30 rounded-lg text-primary font-bold focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="Digite o valor"
                 />
               </div>
             )}

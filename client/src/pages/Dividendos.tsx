@@ -38,9 +38,12 @@ export default function Dividendos() {
   const { state, adicionarDividendo, removerDividendo } = useFinancial();
   const [isAddOpen, setIsAddOpen] = useState(false);
   
-  // --- LÓGICA DE PLANO ---
+  // --- LÓGICA DE PLANO E LIMITES ---
   const planoTipo = state.profile?.plan || "free";
   const isFounder = planoTipo === "founder";
+  const LIMITE_FREE_DIVIDENDOS = 5;
+  const totalDividendos = (state.dividendos || []).length;
+  const botaoAddDisabled = !isFounder && totalDividendos >= LIMITE_FREE_DIVIDENDOS;
 
   const [investimentoSelecionado, setInvestimentoSelecionado] = useState("");
   const [valorDividendo, setValorDividendo] = useState("");
@@ -96,7 +99,6 @@ export default function Dividendos() {
   
   // 4. Progresso rumo à Meta
   const progresso = Number(((rendaPassivaMediaTotal / metaMensal) * 100).toFixed(1));
-  const faltaParaMeta = Number((metaMensal - rendaPassivaMediaTotal).toFixed(2));
 
   // 5. Dados do Mês Selecionado
   const totalDividendosMesSelecionado = Number(dividendos
@@ -121,7 +123,16 @@ export default function Dividendos() {
   };
 
   const handleAdd = async () => {
-    if (!investimentoSelecionado || !valorDividendo) return;
+    if (!investimentoSelecionado || !valorDividendo) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+    
+    if (!isFounder && totalDividendos >= LIMITE_FREE_DIVIDENDOS) {
+      toast.error("Limite de lançamentos atingido");
+      return;
+    }
+
     const inv = state.investimentos.find(i => i.id === investimentoSelecionado);
     if (!inv) return;
 
@@ -137,6 +148,7 @@ export default function Dividendos() {
     setInvestimentoSelecionado("");
     setValorDividendo("");
     setIsAddOpen(false);
+    toast.success("✅ Dividendo lançado com sucesso!");
   };
 
   const handlePremiumFeature = () => {
@@ -167,8 +179,15 @@ export default function Dividendos() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
-            <button className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary/20">
-              <Plus className="w-4 h-4" />
+            <button 
+              disabled={botaoAddDisabled}
+              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${
+                botaoAddDisabled 
+                ? "bg-muted text-muted-foreground cursor-not-allowed" 
+                : "bg-primary text-primary-foreground shadow-primary/20 hover:scale-105"
+              }`}
+            >
+              {botaoAddDisabled ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               Lançar
             </button>
           </DialogTrigger>
@@ -256,7 +275,9 @@ export default function Dividendos() {
                 <p className="text-xs font-bold uppercase tracking-widest text-yellow-600">Renda Média Mensal</p>
                 {!isFounder && <Lock className="w-4 h-4 text-yellow-600" />}
               </div>
-              <h2 className="text-4xl font-bold text-yellow-600">≈ {formatCurrency(rendaPassivaMediaTotal)}</h2>
+              <h2 className={`text-4xl font-bold text-yellow-600 ${!isFounder && "blur-sm select-none"}`}>
+                ≈ {isFounder ? formatCurrency(rendaPassivaMediaTotal) : "R$ 0.000,00"}
+              </h2>
               <p className="text-[10px] text-yellow-600/70 italic">
                 Baseado nos dividendos e juros recebidos.
               </p>
@@ -274,12 +295,14 @@ export default function Dividendos() {
               </div>
 
               <div className="space-y-1">
-                <h2 className="text-5xl font-bold text-yellow-600">{progresso.toFixed(1)}%</h2>
+                <h2 className={`text-5xl font-bold text-yellow-600 ${!isFounder && "blur-sm select-none"}`}>
+                  {isFounder ? `${progresso.toFixed(1)}%` : "00.0%"}
+                </h2>
                 <p className="text-sm text-yellow-600/70">da sua meta de {formatCurrency(metaMensal)}</p>
               </div>
               
               <div className="space-y-2">
-                <Progress value={progresso} className="h-2 bg-yellow-500/20" />
+                <Progress value={isFounder ? progresso : 0} className="h-2 bg-yellow-500/20" />
                 <div className="flex justify-between text-[10px] text-yellow-600/70 font-bold uppercase tracking-widest">
                   <span>Atual</span>
                   <span>{formatCurrency(metaMensal)}</span>
@@ -297,7 +320,9 @@ export default function Dividendos() {
                 <p className="text-xs font-bold uppercase tracking-widest text-yellow-600">Estimativa Renda Fixa</p>
                 {!isFounder && <Lock className="w-4 h-4 text-yellow-600" />}
               </div>
-              <p className="text-3xl font-bold text-yellow-600">≈ {formatCurrency(rendaJurosMensal)}</p>
+              <p className={`text-3xl font-bold text-yellow-600 ${!isFounder && "blur-sm select-none"}`}>
+                ≈ {isFounder ? formatCurrency(rendaJurosMensal) : "R$ 0.000,00"}
+              </p>
               <p className="text-[10px] text-yellow-600/70">Valor estimado com base nos investimentos atuais.</p>
             </CardContent>
           </Card>
@@ -305,7 +330,12 @@ export default function Dividendos() {
 
         {/* 🟢 FREE: HISTÓRICO DE DIVIDENDOS */}
         <div className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Dividendos</h3>
+          <div className="flex justify-between items-end">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Dividendos</h3>
+            <p className="text-[10px] font-bold text-muted-foreground">
+              {totalDividendos}/{isFounder ? "∞" : LIMITE_FREE_DIVIDENDOS} lançamentos ({isFounder ? "FUNDADOR" : "FREE"})
+            </p>
+          </div>
           
           {dividendos.length === 0 ? (
             <div className="text-center py-8 space-y-2 bg-accent/20 rounded-2xl">
