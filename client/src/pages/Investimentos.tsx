@@ -14,7 +14,8 @@ import {
   Lock,
   Crown,
   Sparkles,
-  DollarSign
+  DollarSign,
+  AlertCircle
 } from "lucide-react";
 import { 
   Dialog, 
@@ -34,11 +35,12 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 type TipoRendimento = "dividendo" | "juros";
 
 export default function Investimentos() {
-  const { state, adicionarInvestimento, removerInvestimento } = useFinancial();
+  const { state, adicionarInvestimento, removerInvestimento, updatePatrimonioSupabase } = useFinancial();
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   // --- LÓGICA DE PLANO E LIMITES ---
@@ -58,32 +60,110 @@ export default function Investimentos() {
   const totalAtivos = state.investimentos.length;
   const botaoAddDisabled = !isFounder && totalAtivos >= LIMITE_FREE;
 
-  // --- LÓGICA DE CÁLCULO SINCRONIZADA COM A HOME ---
-  const patrimonioTotal = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
+  // ========== SINCRONIZAÇÃO COMPLETA COM HOME ==========
   
-  // MESMA FÓRMULA DA HOME
-  const taxaAnualBase = state.taxaAnual || 10;
-  const metaPatrimonio = (state.numeroLiberdade * 12) / (taxaAnualBase / 100);
-  
-  const progressoPatrimonio = Math.min((patrimonioTotal / metaPatrimonio) * 100, 100);
+  // 1️⃣ PATRIMÔNIO TOTAL (Sincronizado)
+  const patrimonioTotal = (state.patrimonioAtual && state.patrimonioAtual > 0)
+    ? state.patrimonioAtual
+    : state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
+
+  // 2️⃣ META MENSAL (Número Dominante)
+  const metaMensal = state.numeroLiberdade || 1;
+
+  // 3️⃣ TAXA ANUAL
+  const taxaAnualSegura = state.taxaAnual || 8;
+
+  // 4️⃣ TAXA MENSAL PADRÃO (0.6% ao mês = 6% ao ano)
+  const taxaMensalPadrao = 0.006;
+
+  // 5️⃣ PATRIMÔNIO NECESSÁRIO (Alvo de Liberdade)
+  // FÓRMULA DA HOME: metaMensal / taxaMensalPadrao
+  const patrimonioNecessario = metaMensal > 0 ? metaMensal / taxaMensalPadrao : 0;
+
+  // 6️⃣ PROGRESSO DO PATRIMÔNIO (%)
+  const progressoPatrimonio = patrimonioNecessario > 0 
+    ? Math.min(100, (patrimonioTotal / patrimonioNecessario) * 100) 
+    : 0;
+
+  // 7️⃣ RENDA DE JUROS (Investimentos com taxa)
+  const rendaJuros = state.investimentos
+    .filter(inv => inv.tipoRendimento === "juros")
+    .reduce((acc, inv) => acc + (inv.valor * (inv.taxaAnual / 100)) / 12, 0);
+
+  // 8️⃣ DIVIDENDOS DO MÊS ATUAL
+  const mesAtual = new Date().toISOString().slice(0, 7);
+  const dividendosMesAtual = (state.dividendos || []).filter(d => d.mes === mesAtual);
+  const totalDividendosMes = dividendosMesAtual.reduce((acc, d) => acc + d.valor, 0);
+
+  // 9️⃣ RENDA PASSIVA TOTAL
+  const rendaPassivaAtual = rendaJuros + totalDividendosMes;
+
+  // 🔟 PROGRESSO DE RENDA (Número Dominante)
+  const progressoRenda = metaMensal > 0 
+    ? Math.min(100, (rendaPassivaAtual / metaMensal) * 100) 
+    : 0;
 
   const handleAdd = async () => {
-    if (!nome || !valor) return;
-    if (!isFounder && totalAtivos >= LIMITE_FREE) return;
+    if (!nome || !valor) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+    if (!isFounder && totalAtivos >= LIMITE_FREE) {
+      toast.error("Limite de ativos atingido");
+      return;
+    }
 
-    await adicionarInvestimento({
-      id: Math.random().toString(36).substring(2, 9),
-      nome,
-      valor: Number(valor),
-      categoria,
-      taxaAnual: tipoAtivo === "juros" ? Number(taxa) : 0,
-      tipoRendimento: tipoAtivo,
-      dataAporte: dataAporte,
-    });
+    try {
+      const novoValor = Number(valor);
+      
+      // Calcula novo patrimônio
+      const novoPatrimonio = patrimonioTotal + novoValor;
 
-    setNome("");
-    setValor("");
-    setIsAddOpen(false);
+      // Adiciona o investimento
+      await adicionarInvestimento({
+        id: Math.random().toString(36).substring(2, 9),
+        nome,
+        valor: novoValor,
+        categoria,
+        taxaAnual: tipoAtivo === "juros" ? Number(taxa) : 0,
+        tipoRendimento: tipoAtivo,
+        dataAporte: dataAporte,
+      });
+
+      // Sincroniza patrimônio
+      await updatePatrimonioSupabase(novoPatrimonio);
+
+      toast.success(`✅ Investimento adicionado!\nPatrimônio: ${formatCurrency(novoPatrimonio)}`);
+
+      // Limpa o formulário
+      setNome("");
+      setValor("");
+      setCategoria("Ações");
+      setTaxa(state.taxaAnual.toString());
+      setTipoAtivo("dividendo");
+      setDataAporte(new Date().toISOString().split('T')[0]);
+      setIsAddOpen(false);
+    } catch (err) {
+      console.error("Erro ao adicionar investimento:", err);
+      toast.error("Erro ao adicionar investimento");
+    }
+  };
+
+  const handleRemover = async (id: string) => {
+    try {
+      const investimentoRemovido = state.investimentos.find(inv => inv.id === id);
+      if (!investimentoRemovido) return;
+
+      const novoPatrimonio = patrimonioTotal - investimentoRemovido.valor;
+
+      await removerInvestimento(id);
+      await updatePatrimonioSupabase(novoPatrimonio);
+
+      toast.success(`✅ Investimento removido!\nPatrimônio: ${formatCurrency(novoPatrimonio)}`);
+    } catch (err) {
+      console.error("Erro ao remover investimento:", err);
+      toast.error("Erro ao remover investimento");
+    }
   };
 
   return (
@@ -197,6 +277,34 @@ export default function Investimentos() {
           </Card>
         )}
 
+        {/* ========== NÚMERO DOMINANTE (Renda Passiva) ========== */}
+        <Card className="border-none bg-card shadow-sm">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Número Dominante</p>
+                <p className="text-2xl font-bold text-primary">{progressoRenda.toFixed(1)}%</p>
+              </div>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-primary" />
+              </div>
+            </div>
+            
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Renda Passiva</p>
+                <span className="text-primary font-bold text-xs">{formatCurrency(rendaPassivaAtual)}</span>
+              </div>
+              <Progress value={progressoRenda} className="h-2" />
+              <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                <span>Atual: {formatCurrency(rendaPassivaAtual)}</span>
+                <span>Meta: {formatCurrency(metaMensal)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ========== PATRIMÔNIO TOTAL (Sincronizado com Home) ========== */}
         <Card className="border-none bg-card shadow-sm">
           <CardContent className="p-6 space-y-4">
             <div className="flex justify-between items-start">
@@ -220,12 +328,21 @@ export default function Investimentos() {
               <Progress value={progressoPatrimonio} className="h-2" />
               <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
                 <span>Atual: {formatCurrency(patrimonioTotal)}</span>
-                <span>Alvo: {formatCurrency(metaPatrimonio)}</span>
+                <span>Alvo: {formatCurrency(patrimonioNecessario)}</span>
               </div>
+            </div>
+
+            {/* Aviso de sincronização */}
+            <div className="pt-3 border-t border-border/50 bg-blue-500/5 -mx-6 -mb-6 px-6 py-3 rounded-b-lg flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] text-blue-600 font-medium">
+                Sincronizado com a Home. Adicione investimentos para atualizar automaticamente.
+              </p>
             </div>
           </CardContent>
         </Card>
 
+        {/* ========== SUA CARTEIRA ========== */}
         <div className="space-y-4">
           <div className="flex justify-between items-end">
             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sua Carteira</h3>
@@ -234,38 +351,47 @@ export default function Investimentos() {
             </p>
           </div>
           
-          <div className="space-y-3">
-            {state.investimentos.map((inv) => (
-              <Card key={inv.id} className="border border-border bg-card hover:bg-accent/10 transition-colors group">
-                <CardContent className="p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${inv.tipoRendimento === 'juros' ? 'bg-primary/10' : 'bg-secondary/10'}`}>
-                      {inv.tipoRendimento === 'juros' ? <TrendingUp className="w-5 h-5 text-primary" /> : <DollarSign className="w-5 h-5 text-secondary" />}
+          {state.investimentos.length === 0 ? (
+            <Card className="border border-dashed border-border bg-muted/50">
+              <CardContent className="p-8 text-center space-y-2">
+                <p className="text-sm font-bold text-muted-foreground">Nenhum ativo adicionado</p>
+                <p className="text-xs text-muted-foreground">Clique em "Novo Ativo" para começar</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {state.investimentos.map((inv) => (
+                <Card key={inv.id} className="border border-border bg-card hover:bg-accent/10 transition-colors group">
+                  <CardContent className="p-4 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${inv.tipoRendimento === 'juros' ? 'bg-primary/10' : 'bg-secondary/10'}`}>
+                        {inv.tipoRendimento === 'juros' ? <TrendingUp className="w-5 h-5 text-primary" /> : <DollarSign className="w-5 h-5 text-secondary" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">{inv.nome}</p>
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{inv.categoria}</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(inv.dataAporte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-sm">{inv.nome}</p>
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{inv.categoria}</p>
-                      <p className="text-[10px] text-muted-foreground">{new Date(inv.dataAporte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="font-bold text-sm">{formatCurrency(inv.valor)}</p>
+                        {inv.tipoRendimento === 'juros' && (
+                          <p className="text-[10px] text-primary font-bold">{inv.taxaAnual}% a.a.</p>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => handleRemover(inv.id)}
+                        className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="font-bold text-sm">{formatCurrency(inv.valor)}</p>
-                      {inv.tipoRendimento === 'juros' && (
-                        <p className="text-[10px] text-primary font-bold">{inv.taxaAnual}% a.a.</p>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => removerInvestimento(inv.id)}
-                      className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>

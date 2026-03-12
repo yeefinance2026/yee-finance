@@ -14,6 +14,7 @@ interface FinancialContextType {
   setAporteMensal: (valor: number) => void
   setTaxaAnual: (valor: number) => void
   loadProfileFromSupabase: () => Promise<void>
+  updatePatrimonioSupabase: (valor: number) => Promise<void> // ✅ NOVO
 }
 
 const defaultState: FinancialState = {
@@ -24,7 +25,7 @@ const defaultState: FinancialState = {
   aporteMensal: 1000,
   taxaAnual: 8,
   moeda: "BRL",
-  profile: undefined, //
+  profile: undefined,
 }
 
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined)
@@ -67,7 +68,7 @@ export function FinancialProvider({ children }: { children: React.ReactNode }) {
             investimentoId: div.investimento_id,
             investimentoNome: div.investimento_nome,
             valor: Number(div.valor),
-            data: div.data || div.data_referencia, // Tenta pegar de qualquer um dos campos
+            data: div.data || div.data_referencia,
             mes: (div.data || div.data_referencia || "").slice(0, 7),
           }))
         }))
@@ -111,14 +112,13 @@ export function FinancialProvider({ children }: { children: React.ReactNode }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // CORREÇÃO DEFINITIVA: Incluindo 'data_referencia' para satisfazer o banco
       const { data, error } = await supabase.from("dividendos").insert({
         user_id: user.id,
         investimento_id: div.investimentoId,
         investimento_nome: div.investimentoNome,
         valor: div.valor,
         data: div.data,
-        data_referencia: div.data, // Adicionado este campo exigido pelo seu Supabase
+        data_referencia: div.data,
       }).select().maybeSingle()
 
       if (error) {
@@ -169,18 +169,53 @@ export function FinancialProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // ✅ NOVO: Função para atualizar patrimônio no Supabase
+  const updatePatrimonioSupabase = useCallback(async (valor: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Atualiza no Supabase
+      const { error } = await supabase
+        .from("profiles")
+        .update({ current_patrimony: valor })
+        .eq("id", user.id)
+
+      if (error) {
+        console.error("Erro ao atualizar patrimônio no Supabase:", error)
+        return
+      }
+
+      // Atualiza no estado local
+      setState(prev => ({
+        ...prev,
+        patrimonioAtual: valor,
+      }))
+
+      console.log("✅ Patrimônio atualizado com sucesso:", valor)
+    } catch (err) {
+      console.error("Erro ao atualizar patrimônio:", err)
+    }
+  }, [])
+
   useEffect(() => {
     loadInvestimentos(); loadDividendos(); loadProfileFromSupabase();
   }, [loadProfileFromSupabase])
 
   return (
     <FinancialContext.Provider value={{
-      state, setState, adicionarInvestimento, removerInvestimento,
-      adicionarDividendo, removerDividendo, setNumeroLiberdade: (v) => setState(p => ({ ...p, numeroLiberdade: v })),
+      state, 
+      setState, 
+      adicionarInvestimento, 
+      removerInvestimento,
+      adicionarDividendo, 
+      removerDividendo, 
+      setNumeroLiberdade: (v) => setState(p => ({ ...p, numeroLiberdade: v })),
       setPatrimonioAtual: (v) => setState(p => ({ ...p, patrimonioAtual: v })),
       setAporteMensal: (v) => setState(p => ({ ...p, aporteMensal: v })),
       setTaxaAnual: (v) => setState(p => ({ ...p, taxaAnual: v })),
-      loadProfileFromSupabase
+      loadProfileFromSupabase,
+      updatePatrimonioSupabase, // ✅ NOVO
     }}>
       {children}
     </FinancialContext.Provider>
