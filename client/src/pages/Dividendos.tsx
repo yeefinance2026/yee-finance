@@ -46,7 +46,7 @@ export default function Dividendos() {
   const botaoAddDisabled = !isFounder && totalDividendos >= LIMITE_FREE_DIVIDENDOS;
 
   const [investimentoSelecionado, setInvestimentoSelecionado] = useState("");
-  const [valorDividendo, setValorDividendo] = useState("");
+  const [valorDividendo, setValorDividendo] = useState<string>("");
   const [dataLancamento, setDataLancamento] = useState(new Date().toISOString().split('T')[0]);
 
   const [mesVisualizacao, setMesVisualizacao] = useState(new Date().toISOString().slice(0, 7));
@@ -160,6 +160,7 @@ export default function Dividendos() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* 1️⃣ Header */}
       <header className="p-6 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Link href="/app">
@@ -212,7 +213,13 @@ export default function Dividendos() {
               </div>
               <div className="grid gap-2">
                 <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Valor Recebido (R$)</Label>
-                <Input type="number" value={valorDividendo} onChange={(e) => setValorDividendo(e.target.value)} placeholder="Ex: 150,00" className="rounded-xl py-6" />
+                <Input 
+                  type="number" 
+                  value={valorDividendo} 
+                  onChange={(e) => setValorDividendo(e.target.value)} 
+                  placeholder="Ex: 150,00" 
+                  className="rounded-xl py-6 focus:ring-2 focus:ring-primary/50" 
+                />
               </div>
               <div className="grid gap-2">
                 <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Data do Recebimento</Label>
@@ -227,7 +234,7 @@ export default function Dividendos() {
       </header>
 
       <main className="px-6 space-y-6 max-w-md mx-auto">
-        {/* SELETOR DE MÊS */}
+        {/* 2️⃣ Seletor de mês */}
         <div className="relative group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Calendar className="w-4 h-4 text-primary-foreground" />
@@ -243,7 +250,7 @@ export default function Dividendos() {
           </div>
         </div>
 
-        {/* 🟢 FREE: RECEBIDO NO MÊS */}
+        {/* 3️⃣ Recebido no mês (FREE) */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             {formatarMesAno(mesVisualizacao)}
@@ -257,7 +264,7 @@ export default function Dividendos() {
           </Card>
         </div>
 
-        {/* 🟢 FREE: TOTAL NO ANO */}
+        {/* 4️⃣ Dividendos recebidos no ano (FREE) */}
         {totalDividendosAnoAtual > 0 && (
           <Card className="border-2 border-green-500/30 bg-green-500/5">
             <CardContent className="p-6 text-center space-y-2">
@@ -267,7 +274,30 @@ export default function Dividendos() {
           </Card>
         )}
 
-        {/* 🟡 FUNDADOR: RENDA MÉDIA MENSAL */}
+        {/* 5️⃣ Aviso de limite (FREE) - Integrado no contador do histórico e botão desativado */}
+        {!isFounder && totalDividendos >= LIMITE_FREE_DIVIDENDOS && (
+          <Card className="border-none bg-primary/10 overflow-hidden relative border-l-4 border-l-primary">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-primary">Limite de lançamentos atingido</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Você tem {totalDividendos}/{LIMITE_FREE_DIVIDENDOS} lançamentos no plano free.
+                  </p>
+                </div>
+              </div>
+              <Link href="/checkout">
+                <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+                  <Zap className="w-4 h-4" />
+                  Desbloquear Fundador
+                </button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 6️⃣ Renda Média Mensal (Premium) */}
         <button onClick={handlePremiumFeature} className={`w-full ${isFounder ? "cursor-default" : "cursor-pointer"}`}>
           <Card className={`border border-yellow-500/30 bg-yellow-500/5 ${!isFounder && "hover:bg-yellow-500/10"} transition-colors`}>
             <CardContent className="p-6 space-y-2 text-left">
@@ -285,7 +315,7 @@ export default function Dividendos() {
           </Card>
         </button>
 
-        {/* 🟡 FUNDADOR: COBERTURA DA LIBERDADE */}
+        {/* 7️⃣ Cobertura da Liberdade (Premium) */}
         <button onClick={handlePremiumFeature} className={`w-full ${isFounder ? "cursor-default" : "cursor-pointer"}`}>
           <Card className="border-none bg-yellow-500/5 overflow-hidden relative">
             <CardContent className="p-6 space-y-4 text-left">
@@ -298,7 +328,9 @@ export default function Dividendos() {
                 <h2 className={`text-5xl font-bold text-yellow-600 ${!isFounder && "blur-sm select-none"}`}>
                   {isFounder ? `${progresso.toFixed(1)}%` : "00.0%"}
                 </h2>
-                <p className="text-sm text-yellow-600/70">da sua meta de {formatCurrency(metaMensal)}</p>
+                <p className="text-sm text-yellow-600/70">
+                  {isFounder ? formatCurrency(rendaPassivaMediaTotal) : "R$ 0,00"} / {formatCurrency(metaMensal)}
+                </p>
               </div>
               
               <div className="space-y-2">
@@ -312,7 +344,7 @@ export default function Dividendos() {
           </Card>
         </button>
 
-        {/* 🟡 FUNDADOR: ESTIMATIVA RENDA FIXA */}
+        {/* 8️⃣ Estimativa de renda fixa (Premium) */}
         <button onClick={handlePremiumFeature} className={`w-full ${isFounder ? "cursor-default" : "cursor-pointer"}`}>
           <Card className={`border border-yellow-500/30 bg-yellow-500/5 ${!isFounder && "hover:bg-yellow-500/10"} transition-colors`}>
             <CardContent className="p-6 space-y-3 text-left">
@@ -328,7 +360,7 @@ export default function Dividendos() {
           </Card>
         </button>
 
-        {/* 🟢 FREE: HISTÓRICO DE DIVIDENDOS */}
+        {/* 9️⃣ Histórico de dividendos (FREE) */}
         <div className="space-y-4">
           <div className="flex justify-between items-end">
             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Dividendos</h3>
