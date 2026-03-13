@@ -15,7 +15,8 @@ import {
   Zap,
   Sparkles,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  BarChart3
 } from "lucide-react";
 import { 
   Dialog, 
@@ -47,13 +48,12 @@ export default function Investimentos() {
   const planoTipo = state.profile?.plan || "free";
   const isFounder = planoTipo === "founder";
   const LIMITE_FREE = 5;
-  const limiteInvestimentos = isFounder ? Infinity : LIMITE_FREE;
 
   // Form state
   const [nome, setNome] = useState("");
-  const [valor, setValor] = useState("");
+  const [valor, setValor] = useState<string>("");
   const [categoria, setCategoria] = useState("Ações");
-  const [taxa, setTaxa] = useState(state.taxaAnual.toString());
+  const [taxa, setTaxa] = useState<string>("");
   const [tipoAtivo, setTipoAtivo] = useState<TipoRendimento>("dividendo");
   const [dataAporte, setDataAporte] = useState(new Date().toISOString().split('T')[0]);
 
@@ -70,14 +70,10 @@ export default function Investimentos() {
   // 2️⃣ META MENSAL (Número Dominante)
   const metaMensal = state.numeroLiberdade || 1;
 
-  // 3️⃣ TAXA ANUAL
-  const taxaAnualSegura = state.taxaAnual || 8;
-
   // 4️⃣ TAXA MENSAL PADRÃO (0.6% ao mês = 6% ao ano)
   const taxaMensalPadrao = 0.006;
 
   // 5️⃣ PATRIMÔNIO NECESSÁRIO (Alvo de Liberdade)
-  // FÓRMULA DA HOME: metaMensal / taxaMensalPadrao
   const patrimonioNecessario = metaMensal > 0 ? metaMensal / taxaMensalPadrao : 0;
 
   // 6️⃣ PROGRESSO DO PATRIMÔNIO (%)
@@ -115,22 +111,18 @@ export default function Investimentos() {
 
     try {
       const novoValor = Number(valor);
-      
-      // Calcula novo patrimônio
       const novoPatrimonio = patrimonioTotal + novoValor;
 
-      // Adiciona o investimento
       await adicionarInvestimento({
         id: Math.random().toString(36).substring(2, 9),
         nome,
         valor: novoValor,
         categoria,
-        taxaAnual: tipoAtivo === "juros" ? Number(taxa) : 0,
+        taxaAnual: tipoAtivo === "juros" ? Number(taxa || 0) : 0,
         tipoRendimento: tipoAtivo,
         dataAporte: dataAporte,
       });
 
-      // Sincroniza patrimônio
       await updatePatrimonioSupabase(novoPatrimonio);
 
       toast.success(`✅ Investimento adicionado!\nPatrimônio: ${formatCurrency(novoPatrimonio)}`);
@@ -139,7 +131,7 @@ export default function Investimentos() {
       setNome("");
       setValor("");
       setCategoria("Ações");
-      setTaxa(state.taxaAnual.toString());
+      setTaxa("");
       setTipoAtivo("dividendo");
       setDataAporte(new Date().toISOString().split('T')[0]);
       setIsAddOpen(false);
@@ -166,8 +158,16 @@ export default function Investimentos() {
     }
   };
 
+  const handlePremiumFeature = () => {
+    if (isFounder) return;
+    toast.info("Disponível no plano Fundador", {
+      description: "Desbloqueie análises avançadas e projeções.",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* 1️⃣ Header */}
       <header className="p-6 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Link href="/app">
@@ -176,7 +176,7 @@ export default function Investimentos() {
             </button>
           </Link>
           <div className="flex flex-col">
-            <h1 className="text-xl font-bold">Meus Ativos</h1>
+            <h1 className="text-xl font-bold">Investimentos</h1>
             {isFounder && (
               <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold flex items-center gap-1 w-fit">
                 <Zap className="w-2 h-2" /> PLANO FUNDADOR
@@ -196,7 +196,7 @@ export default function Investimentos() {
               }`}
             >
               {botaoAddDisabled ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              Novo Ativo
+              Adicionar
             </button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] rounded-3xl">
@@ -206,13 +206,26 @@ export default function Investimentos() {
             </DialogHeader>
             <div className="grid gap-6 py-4">
               <div className="grid gap-2">
+                <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Tipo de Rendimento</Label>
+                <div className="grid grid-cols-2 gap-2 bg-muted p-1 rounded-xl">
+                  <button onClick={() => setTipoAtivo("dividendo")} className={`py-2 text-xs font-bold rounded-lg transition-all ${tipoAtivo === "dividendo" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Dividendo</button>
+                  <button onClick={() => setTipoAtivo("juros")} className={`py-2 text-xs font-bold rounded-lg transition-all ${tipoAtivo === "juros" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Juros</button>
+                </div>
+              </div>
+              <div className="grid gap-2">
                 <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Nome do Ativo</Label>
                 <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: PETR4, MXRF11, CDB..." className="rounded-xl py-6" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Valor (R$)</Label>
-                  <Input type="number" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" className="rounded-xl py-6" />
+                  <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Valor Investido (R$)</Label>
+                  <Input 
+                    type="number" 
+                    value={valor} 
+                    onChange={(e) => setValor(e.target.value)} 
+                    placeholder="Ex: 5000" 
+                    className="rounded-xl py-6" 
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Categoria</Label>
@@ -223,23 +236,27 @@ export default function Investimentos() {
                     <SelectContent>
                       <SelectItem value="Ações">Ações</SelectItem>
                       <SelectItem value="FIIs">FIIs</SelectItem>
-                      <SelectItem value="Renda Fixa">Renda Fixa</SelectItem>
+                      <SelectItem value="ETFs">ETFs</SelectItem>
+                      <SelectItem value="BDRs">BDRs</SelectItem>
+                      <SelectItem value="CDB">CDB</SelectItem>
+                      <SelectItem value="Tesouro Direto">Tesouro Direto</SelectItem>
+                      <SelectItem value="LCI/LCA">LCI/LCA</SelectItem>
+                      <SelectItem value="Debêntures">Debêntures</SelectItem>
                       <SelectItem value="Cripto">Cripto</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Tipo de Rendimento</Label>
-                <div className="grid grid-cols-2 gap-2 bg-muted p-1 rounded-xl">
-                  <button onClick={() => setTipoAtivo("dividendo")} className={`py-2 text-xs font-bold rounded-lg transition-all ${tipoAtivo === "dividendo" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Dividendos</button>
-                  <button onClick={() => setTipoAtivo("juros")} className={`py-2 text-xs font-bold rounded-lg transition-all ${tipoAtivo === "juros" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>Juros (RF)</button>
-                </div>
-              </div>
               {tipoAtivo === "juros" && (
                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
                   <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Taxa Anual (%)</Label>
-                  <Input type="number" value={taxa} onChange={(e) => setTaxa(e.target.value)} className="rounded-xl py-6" />
+                  <Input 
+                    type="number" 
+                    value={taxa} 
+                    onChange={(e) => setTaxa(e.target.value)} 
+                    placeholder="Ex: 8" 
+                    className="rounded-xl py-6" 
+                  />
                 </div>
               )}
               <div className="grid gap-2">
@@ -255,62 +272,16 @@ export default function Investimentos() {
       </header>
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
-        {!isFounder && totalAtivos >= LIMITE_FREE && (
-          <Card className="border-none bg-primary/10 overflow-hidden relative border-l-4 border-l-primary">
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-sm font-bold text-primary">Limite de Ativos Atingido</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Você atingiu o limite de {LIMITE_FREE} ativos no plano gratuito.
-                  </p>
-                </div>
-              </div>
-              <Link href="/checkout">
-                <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
-                  <Sparkles className="w-4 h-4" />
-                  ✨ Desbloquear Fundador
-                </button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ========== NÚMERO DOMINANTE (Renda Passiva) ========== */}
+        {/* 2️⃣ Capital acumulado (FREE) */}
         <Card className="border-none bg-card shadow-sm">
           <CardContent className="p-6 space-y-4">
             <div className="flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Número Dominante</p>
-                <p className="text-2xl font-bold text-primary">{progressoRenda.toFixed(1)}%</p>
-              </div>
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-primary" />
-              </div>
-            </div>
-            
-            <div className="space-y-2 pt-2 border-t border-border">
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Renda Passiva</p>
-                <span className="text-primary font-bold text-xs">{formatCurrency(rendaPassivaAtual)}</span>
-              </div>
-              <Progress value={progressoRenda} className="h-2" />
-              <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
-                <span>Atual: {formatCurrency(rendaPassivaAtual)}</span>
-                <span>Meta: {formatCurrency(metaMensal)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ========== PATRIMÔNIO TOTAL (Sincronizado com Home) ========== */}
-        <Card className="border-none bg-card shadow-sm">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Patrimônio Total</p>
-                <p className="text-2xl font-bold text-primary">{formatCurrency(patrimonioTotal)}</p>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Capital Acumulado</p>
+                <p className="text-3xl font-bold text-primary">{formatCurrency(patrimonioTotal)}</p>
+                <p className="text-[10px] font-bold text-muted-foreground">
+                  {totalAtivos}/{isFounder ? "∞" : LIMITE_FREE} ativos ({isFounder ? "FUNDADOR" : "FREE"})
+                </p>
               </div>
               <div className="p-2 bg-primary/10 rounded-lg">
                 <PieChart className="w-5 h-5 text-primary" />
@@ -321,7 +292,7 @@ export default function Investimentos() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Meta de Liberdade</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Progresso da Meta</p>
                 </div>
                 <span className="text-primary font-bold text-xs">{progressoPatrimonio.toFixed(1)}%</span>
               </div>
@@ -331,67 +302,191 @@ export default function Investimentos() {
                 <span>Alvo: {formatCurrency(patrimonioNecessario)}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Aviso de sincronização */}
-            <div className="pt-3 border-t border-border/50 bg-blue-500/5 -mx-6 -mb-6 px-6 py-3 rounded-b-lg flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-              <p className="text-[10px] text-blue-600 font-medium">
-                Sincronizado com a Home. Adicione investimentos para atualizar automaticamente.
-              </p>
+        {/* 3️⃣ Aviso de limite FREE */}
+        {!isFounder && totalAtivos >= LIMITE_FREE && (
+          <Card className="border-none bg-primary/10 overflow-hidden relative border-l-4 border-l-primary">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-primary">Limite de investimentos atingido</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Upgrade para Fundador para adicionar mais ativos à sua carteira.
+                  </p>
+                </div>
+              </div>
+              <Link href="/checkout">
+                <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+                  <Zap className="w-4 h-4" />
+                  ✨ Desbloquear Fundador
+                </button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 4️⃣ Renda passiva estimada (FREE) */}
+        <Card className="border-none bg-card shadow-sm">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Renda Passiva Estimada</p>
+                <p className="text-2xl font-bold text-primary">≈ {formatCurrency(rendaPassivaAtual)}/mês</p>
+              </div>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-primary" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* ========== SUA CARTEIRA ========== */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-end">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sua Carteira</h3>
-            <p className="text-[10px] font-bold text-muted-foreground">
-              {totalAtivos}/{isFounder ? "∞" : LIMITE_FREE} ativos ({isFounder ? "FUNDADOR" : "FREE"})
-            </p>
-          </div>
+        {/* 5️⃣ & 6️⃣ SUA CARTEIRA (Renda Variável e Fixa) */}
+        <div className="space-y-6">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sua Carteira</h3>
           
           {state.investimentos.length === 0 ? (
             <Card className="border border-dashed border-border bg-muted/50">
               <CardContent className="p-8 text-center space-y-2">
                 <p className="text-sm font-bold text-muted-foreground">Nenhum ativo adicionado</p>
-                <p className="text-xs text-muted-foreground">Clique em "Novo Ativo" para começar</p>
+                <p className="text-xs text-muted-foreground">Clique em "Adicionar" para começar</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {state.investimentos.map((inv) => (
-                <Card key={inv.id} className="border border-border bg-card hover:bg-accent/10 transition-colors group">
-                  <CardContent className="p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${inv.tipoRendimento === 'juros' ? 'bg-primary/10' : 'bg-secondary/10'}`}>
-                        {inv.tipoRendimento === 'juros' ? <TrendingUp className="w-5 h-5 text-primary" /> : <DollarSign className="w-5 h-5 text-secondary" />}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">{inv.nome}</p>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{inv.categoria}</p>
-                        <p className="text-[10px] text-muted-foreground">{new Date(inv.dataAporte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="font-bold text-sm">{formatCurrency(inv.valor)}</p>
-                        {inv.tipoRendimento === 'juros' && (
-                          <p className="text-[10px] text-primary font-bold">{inv.taxaAnual}% a.a.</p>
-                        )}
-                      </div>
-                      <button 
-                        onClick={() => handleRemover(inv.id)}
-                        className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="space-y-4">
+              {/* Renda Variável */}
+              {state.investimentos.filter(inv => inv.tipoRendimento === "dividendo").length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Renda Variável</p>
+                  {state.investimentos.filter(inv => inv.tipoRendimento === "dividendo").map((inv) => (
+                    <Card key={inv.id} className="border border-border bg-card hover:bg-accent/10 transition-colors group">
+                      <CardContent className="p-4 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                            <DollarSign className="w-5 h-5 text-secondary" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">{inv.nome}</p>
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{inv.categoria}</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(inv.dataAporte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="font-bold text-sm">{formatCurrency(inv.valor)}</p>
+                          </div>
+                          <button 
+                            onClick={() => handleRemover(inv.id)}
+                            className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Renda Fixa */}
+              {state.investimentos.filter(inv => inv.tipoRendimento === "juros").length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Renda Fixa</p>
+                  {state.investimentos.filter(inv => inv.tipoRendimento === "juros").map((inv) => (
+                    <Card key={inv.id} className="border border-border bg-card hover:bg-accent/10 transition-colors group">
+                      <CardContent className="p-4 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <TrendingUp className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">{inv.nome}</p>
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{inv.categoria}</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(inv.dataAporte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="font-bold text-sm">{formatCurrency(inv.valor)}</p>
+                            <p className="text-[10px] text-primary font-bold">{inv.taxaAnual}% a.a.</p>
+                            <p className="text-[10px] text-muted-foreground">≈ {formatCurrency((inv.valor * (inv.taxaAnual / 100)) / 12)}/mês</p>
+                          </div>
+                          <button 
+                            onClick={() => handleRemover(inv.id)}
+                            className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
+        </div>
+
+        {/* 7️⃣ Análises avançadas (Premium) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              {!isFounder && <Lock className="w-3 h-3" />}
+              Análises Avançadas
+            </h3>
+            {!isFounder && (
+              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Premium</span>
+            )}
+          </div>
+
+          <div className={`space-y-4 ${!isFounder && "blur-sm select-none opacity-50"}`} onClick={handlePremiumFeature}>
+            <Card className="border border-border bg-card">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <PieChart className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Diversificação da Carteira</p>
+                    <p className="text-xs text-muted-foreground">Renda Variável vs Renda Fixa</p>
+                  </div>
+                </div>
+                <ChevronLeft className="w-5 h-5 text-muted-foreground rotate-180" />
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border bg-card">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Evolução do Patrimônio</p>
+                    <p className="text-xs text-muted-foreground">Gráfico de crescimento mensal</p>
+                  </div>
+                </div>
+                <ChevronLeft className="w-5 h-5 text-muted-foreground rotate-180" />
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border bg-card">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Target className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Projeção de Renda Futura</p>
+                    <p className="text-xs text-muted-foreground">Simule seu crescimento em 5 anos</p>
+                  </div>
+                </div>
+                <ChevronLeft className="w-5 h-5 text-muted-foreground rotate-180" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>
