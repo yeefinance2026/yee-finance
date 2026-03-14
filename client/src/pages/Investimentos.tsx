@@ -16,7 +16,8 @@ import {
   Sparkles,
   DollarSign,
   AlertCircle,
-  BarChart3
+  BarChart3,
+  ChevronRight
 } from "lucide-react";
 import { 
   Dialog, 
@@ -60,44 +61,53 @@ export default function Investimentos() {
   const totalAtivos = state.investimentos.length;
   const botaoAddDisabled = !isFounder && totalAtivos >= LIMITE_FREE;
 
-  // ========== SINCRONIZAÇÃO COMPLETA COM HOME ==========
+  // ========== CÁLCULOS DE PATRIMÔNIO E RENDA ==========
   
-  // 1️⃣ PATRIMÔNIO TOTAL (Sincronizado)
   const patrimonioTotal = (state.patrimonioAtual && state.patrimonioAtual > 0)
     ? state.patrimonioAtual
     : state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
 
-  // 2️⃣ META MENSAL (Número Dominante)
   const metaMensal = state.numeroLiberdade || 1;
-
-  // 4️⃣ TAXA MENSAL PADRÃO (0.6% ao mês = 6% ao ano)
   const taxaMensalPadrao = 0.006;
-
-  // 5️⃣ PATRIMÔNIO NECESSÁRIO (Alvo de Liberdade)
   const patrimonioNecessario = metaMensal > 0 ? metaMensal / taxaMensalPadrao : 0;
-
-  // 6️⃣ PROGRESSO DO PATRIMÔNIO (%)
   const progressoPatrimonio = patrimonioNecessario > 0 
     ? Math.min(100, (patrimonioTotal / patrimonioNecessario) * 100) 
     : 0;
 
-  // 7️⃣ RENDA DE JUROS (Investimentos com taxa)
   const rendaJuros = state.investimentos
     .filter(inv => inv.tipoRendimento === "juros")
     .reduce((acc, inv) => acc + (inv.valor * (inv.taxaAnual / 100)) / 12, 0);
 
-  // 8️⃣ DIVIDENDOS DO MÊS ATUAL
   const mesAtual = new Date().toISOString().slice(0, 7);
   const dividendosMesAtual = (state.dividendos || []).filter(d => d.mes === mesAtual);
   const totalDividendosMes = dividendosMesAtual.reduce((acc, d) => acc + d.valor, 0);
-
-  // 9️⃣ RENDA PASSIVA TOTAL
   const rendaPassivaAtual = rendaJuros + totalDividendosMes;
 
-  // 🔟 PROGRESSO DE RENDA (Número Dominante)
-  const progressoRenda = metaMensal > 0 
-    ? Math.min(100, (rendaPassivaAtual / metaMensal) * 100) 
-    : 0;
+  // ========== ANÁLISES AVANÇADAS (CÁLCULOS REAIS) ==========
+  
+  // 1. Diversificação
+  const totalInvestidoReal = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
+  const totalRV = state.investimentos
+    .filter(inv => inv.tipoRendimento === "dividendo")
+    .reduce((acc, inv) => acc + inv.valor, 0);
+  const totalRF = state.investimentos
+    .filter(inv => inv.tipoRendimento === "juros")
+    .reduce((acc, inv) => acc + inv.valor, 0);
+  
+  const percentualRV = totalInvestidoReal > 0 ? ((totalRV / totalInvestidoReal) * 100).toFixed(1) : "0.0";
+  const percentualRF = totalInvestidoReal > 0 ? ((totalRF / totalInvestidoReal) * 100).toFixed(1) : "0.0";
+
+  // 2. Projeção de Renda Futura (5 anos = 60 meses)
+  // Simulação simplificada considerando aportes mensais e reinvestimento
+  const aporteMensal = state.aporteMensal || 0;
+  const taxaAnual = state.taxaAnual || 8;
+  const taxaMensal = (taxaAnual / 100) / 12;
+  
+  let patrimonioProjetado = patrimonioTotal;
+  for (let i = 0; i < 60; i++) {
+    patrimonioProjetado = (patrimonioProjetado + aporteMensal) * (1 + taxaMensal);
+  }
+  const rendaProjetada5Anos = patrimonioProjetado * 0.006;
 
   const handleAdd = async () => {
     if (!nome || !valor) {
@@ -124,10 +134,8 @@ export default function Investimentos() {
       });
 
       await updatePatrimonioSupabase(novoPatrimonio);
-
       toast.success(`✅ Investimento adicionado!\nPatrimônio: ${formatCurrency(novoPatrimonio)}`);
 
-      // Limpa o formulário
       setNome("");
       setValor("");
       setCategoria("Ações");
@@ -147,10 +155,8 @@ export default function Investimentos() {
       if (!investimentoRemovido) return;
 
       const novoPatrimonio = patrimonioTotal - investimentoRemovido.valor;
-
       await removerInvestimento(id);
       await updatePatrimonioSupabase(novoPatrimonio);
-
       toast.success(`✅ Investimento removido!\nPatrimônio: ${formatCurrency(novoPatrimonio)}`);
     } catch (err) {
       console.error("Erro ao remover investimento:", err);
@@ -441,51 +447,98 @@ export default function Investimentos() {
             )}
           </div>
 
-          <div className={`space-y-4 ${!isFounder && "blur-sm select-none opacity-50"}`} onClick={handlePremiumFeature}>
-            <Card className="border border-border bg-card">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <PieChart className="w-5 h-5 text-primary" />
+          <div className="space-y-4">
+            {/* Card 1: Diversificação */}
+            <button 
+              onClick={handlePremiumFeature} 
+              className={`w-full text-left transition-all ${!isFounder && "cursor-pointer"}`}
+            >
+              <Card className={`border ${isFounder ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <PieChart className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">Diversificação da Carteira</p>
+                        <p className="text-xs text-muted-foreground">Renda Variável vs Renda Fixa</p>
+                      </div>
+                    </div>
+                    {!isFounder ? <Lock className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-primary" />}
                   </div>
-                  <div>
-                    <p className="font-bold text-sm">Diversificação da Carteira</p>
-                    <p className="text-xs text-muted-foreground">Renda Variável vs Renda Fixa</p>
+                  
+                  <div className={`space-y-3 ${!isFounder && "blur-[2px] select-none opacity-50"}`}>
+                    <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest mb-1">
+                      <span className="text-secondary">Renda Variável ({percentualRV}%)</span>
+                      <span className="text-primary">Renda Fixa ({percentualRF}%)</span>
+                    </div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden flex">
+                      <div className="h-full bg-secondary" style={{ width: `${percentualRV}%` }} />
+                      <div className="h-full bg-primary" style={{ width: `${percentualRF}%` }} />
+                    </div>
                   </div>
-                </div>
-                <ChevronLeft className="w-5 h-5 text-muted-foreground rotate-180" />
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </button>
 
-            <Card className="border border-border bg-card">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <BarChart3 className="w-5 h-5 text-primary" />
+            {/* Card 2: Evolução */}
+            <button 
+              onClick={handlePremiumFeature} 
+              className={`w-full text-left transition-all ${!isFounder && "cursor-pointer"}`}
+            >
+              <Card className={`border ${isFounder ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <BarChart3 className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">Evolução do Patrimônio</p>
+                        <p className="text-xs text-muted-foreground">Crescimento mensal da carteira</p>
+                      </div>
+                    </div>
+                    {!isFounder ? <Lock className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-primary" />}
                   </div>
-                  <div>
-                    <p className="font-bold text-sm">Evolução do Patrimônio</p>
-                    <p className="text-xs text-muted-foreground">Gráfico de crescimento mensal</p>
+                  
+                  <div className={`h-16 flex items-end gap-1 px-1 ${!isFounder && "blur-[2px] select-none opacity-50"}`}>
+                    {[40, 45, 35, 55, 65, 50, 80, 100].map((h, i) => (
+                      <div key={i} className="flex-1 bg-primary/20 rounded-t-sm" style={{ height: `${h}%` }} />
+                    ))}
                   </div>
-                </div>
-                <ChevronLeft className="w-5 h-5 text-muted-foreground rotate-180" />
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </button>
 
-            <Card className="border border-border bg-card">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Target className="w-5 h-5 text-primary" />
+            {/* Card 3: Projeção */}
+            <button 
+              onClick={handlePremiumFeature} 
+              className={`w-full text-left transition-all ${!isFounder && "cursor-pointer"}`}
+            >
+              <Card className={`border ${isFounder ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <Target className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">Projeção de Renda Futura</p>
+                        <p className="text-xs text-muted-foreground">Simulação para os próximos 5 anos</p>
+                      </div>
+                    </div>
+                    {!isFounder ? <Lock className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-primary" />}
                   </div>
-                  <div>
-                    <p className="font-bold text-sm">Projeção de Renda Futura</p>
-                    <p className="text-xs text-muted-foreground">Simule seu crescimento em 5 anos</p>
+                  
+                  <div className={`space-y-1 ${!isFounder && "blur-[2px] select-none opacity-50"}`}>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Em 5 anos você poderá gerar:</p>
+                    <p className="text-xl font-bold text-primary">≈ {formatCurrency(rendaProjetada5Anos)}/mês</p>
+                    <p className="text-[10px] text-muted-foreground italic">Considerando aportes e reinvestimentos.</p>
                   </div>
-                </div>
-                <ChevronLeft className="w-5 h-5 text-muted-foreground rotate-180" />
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </button>
           </div>
         </div>
       </main>
