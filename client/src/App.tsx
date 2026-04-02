@@ -57,6 +57,8 @@ function Router() {
   // 🔁 Redirecionamentos e Verificação de Perfil
   useEffect(() => {
     if (loading) return;
+    
+    if (location.startsWith("/api")) return; // 👈 IMPORTANTE
 
     const isAppRoute = [
       "/app", "/investimentos", "/dividendos", "/simulacao", "/configuracoes", "/perfil", "/onboarding"

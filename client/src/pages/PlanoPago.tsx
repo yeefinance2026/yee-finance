@@ -36,7 +36,7 @@ export default function PlanoPago() {
               <h3 className="text-2xl font-bold">Plano Fundador</h3>
               <div className="flex items-center justify-center gap-1">
                 <span className="text-muted-foreground line-through text-sm">R$ 29,90</span>
-                <span className="text-4xl font-bold text-primary">R$ 14,90</span>
+                <span className="text-4xl font-bold text-primary">R$ 9,90</span>
                 <span className="text-muted-foreground text-sm">/mês</span>
               </div>
               <p className="text-xs text-muted-foreground">Preço travado para sempre enquanto durar a assinatura.</p>

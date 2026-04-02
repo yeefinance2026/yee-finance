@@ -57,7 +57,7 @@ export default function Configuracoes() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-primary uppercase tracking-widest">Plano Fundador</p>
-                <p className="text-xs text-muted-foreground">Garanta sua vaga por apenas R$ 14,90/mês</p>
+                <p className="text-xs text-muted-foreground">Garanta sua vaga por apenas R$ 9,90/mês</p>
               </div>
               <ChevronLeft className="w-5 h-5 text-primary rotate-180" />
             </CardContent>

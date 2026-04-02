@@ -33,7 +33,7 @@ export default function TermsOfUse() {
 
         <section className="space-y-4">
           <h2 className="text-xl font-bold">3. Plano Fundador</h2>
-          <p className="text-muted-foreground">O preço promocional de R$ 14,90/mês é válido para os 100 primeiros fundadores.</p>
+          <p className="text-muted-foreground">O preço promocional de R$ 9,90/mês é válido para os 100 primeiros fundadores.</p>
           <p className="text-muted-foreground">Após esse limite, o valor padrão será R$ 29,90/mês.</p>
         </section>
 

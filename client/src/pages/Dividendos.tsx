@@ -4,9 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
 import { Link } from "wouter";
-import { 
-  ChevronLeft, 
-  Plus, 
+import {
+  ChevronLeft,
+  Plus,
   Trash2,
   BarChart2,
   Calendar,
@@ -14,30 +14,31 @@ import {
   Lock,
   Zap,
 } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogTrigger, 
-  DialogFooter 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogFooter
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { assinar } from "@/lib/stripe";
 
 export default function Dividendos() {
   const { state, adicionarDividendo, removerDividendo } = useFinancial();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  
+
   // --- LÓGICA DE PLANO E LIMITES ---
   const planoTipo = state.profile?.plan || "free";
   const isFounder = planoTipo === "founder";
@@ -56,9 +57,9 @@ export default function Dividendos() {
   );
 
   const dividendos = state.dividendos || [];
-  
+
   // --- LÓGICA DE RENDA MÉDIA MENSAL ---
-  
+
   // 1. Juros Projetados para o mês selecionado
   const calcularRendaJurosNoMes = () => {
     const [anoVis, mesVis] = mesVisualizacao.split("-").map(Number);
@@ -69,7 +70,7 @@ export default function Dividendos() {
       .reduce((acc, inv) => {
         const dataAporte = new Date(inv.dataAporte + 'T00:00:00');
         const diffMeses = (dataAlvo.getFullYear() - dataAporte.getFullYear()) * 12 + (dataAlvo.getMonth() - dataAporte.getMonth());
-        
+
         if (diffMeses < 0) return acc;
 
         const taxaMensal = (inv.taxaAnual / 100) / 12;
@@ -77,7 +78,7 @@ export default function Dividendos() {
         for (let i = 0; i < diffMeses; i++) {
           montanteAtual += montanteAtual * taxaMensal;
         }
-        
+
         const rendimentoDesteMes = montanteAtual * taxaMensal;
         return acc + Number(rendimentoDesteMes.toFixed(2));
       }, 0);
@@ -96,7 +97,7 @@ export default function Dividendos() {
   // 3. Renda Passiva Média Total
   const rendaPassivaMediaTotal = Number((rendaJurosMensal + mediaMensalDividendos).toFixed(2));
   const metaMensal = state.numeroLiberdade || 1000;
-  
+
   // 4. Progresso rumo à Meta
   const progresso = Number(((rendaPassivaMediaTotal / metaMensal) * 100).toFixed(1));
 
@@ -127,7 +128,7 @@ export default function Dividendos() {
       toast.error("Preencha todos os campos");
       return;
     }
-    
+
     if (!isFounder && totalDividendos >= LIMITE_FREE_DIVIDENDOS) {
       toast.error("Limite de lançamentos atingido");
       return;
@@ -180,13 +181,12 @@ export default function Dividendos() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
-            <button 
+            <button
               disabled={botaoAddDisabled}
-              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${
-                botaoAddDisabled 
-                ? "bg-muted text-muted-foreground cursor-not-allowed" 
+              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${botaoAddDisabled
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
                 : "bg-primary text-primary-foreground shadow-primary/20 hover:scale-105"
-              }`}
+                }`}
             >
               {botaoAddDisabled ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               Lançar
@@ -213,12 +213,12 @@ export default function Dividendos() {
               </div>
               <div className="grid gap-2">
                 <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Valor Recebido (R$)</Label>
-                <Input 
-                  type="number" 
-                  value={valorDividendo} 
-                  onChange={(e) => setValorDividendo(e.target.value)} 
-                  placeholder="Ex: 150,00" 
-                  className="rounded-xl py-6 focus:ring-2 focus:ring-primary/50" 
+                <Input
+                  type="number"
+                  value={valorDividendo}
+                  onChange={(e) => setValorDividendo(e.target.value)}
+                  placeholder="Ex: 150,00"
+                  className="rounded-xl py-6 focus:ring-2 focus:ring-primary/50"
                 />
               </div>
               <div className="grid gap-2">
@@ -239,9 +239,9 @@ export default function Dividendos() {
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Calendar className="w-4 h-4 text-primary-foreground" />
           </div>
-          <Input 
-            type="month" 
-            value={mesVisualizacao} 
+          <Input
+            type="month"
+            value={mesVisualizacao}
             onChange={(e) => setMesVisualizacao(e.target.value)}
             className="w-full bg-primary text-primary-foreground font-bold rounded-2xl py-7 pl-12 pr-4 border-none shadow-lg shadow-primary/20 appearance-none cursor-pointer text-lg"
           />
@@ -255,7 +255,7 @@ export default function Dividendos() {
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             {formatarMesAno(mesVisualizacao)}
           </h3>
-          
+
           <Card className="border border-border bg-card">
             <CardContent className="p-6">
               <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Recebido no mês</p>
@@ -287,12 +287,13 @@ export default function Dividendos() {
                   </p>
                 </div>
               </div>
-              <Link href="/checkout">
-                <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
-                  <Zap className="w-4 h-4" />
-                  Desbloquear Fundador
-                </button>
-              </Link>
+              <button
+                onClick={assinar}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
+              >
+                <Zap className="w-4 h-4" />
+                Desbloquear Fundador
+              </button>
             </CardContent>
           </Card>
         )}
@@ -332,7 +333,7 @@ export default function Dividendos() {
                   {isFounder ? formatCurrency(rendaPassivaMediaTotal) : "R$ 0,00"} / {formatCurrency(metaMensal)}
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <Progress value={isFounder ? progresso : 0} className="h-2 bg-yellow-500/20" />
                 <div className="flex justify-between text-[10px] text-yellow-600/70 font-bold uppercase tracking-widest">
@@ -368,7 +369,7 @@ export default function Dividendos() {
               {totalDividendos}/{isFounder ? "∞" : LIMITE_FREE_DIVIDENDOS} lançamentos ({isFounder ? "FUNDADOR" : "FREE"})
             </p>
           </div>
-          
+
           {dividendos.length === 0 ? (
             <div className="text-center py-8 space-y-2 bg-accent/20 rounded-2xl">
               <BarChart2 className="w-8 h-8 text-muted-foreground mx-auto opacity-40" />
@@ -393,8 +394,8 @@ export default function Dividendos() {
                         <p className="font-bold text-sm text-primary">{formatCurrency(d.valor)}</p>
                         <p className="text-[10px] text-muted-foreground">{formatarData(d.data)}</p>
                       </div>
-                      <button 
-                        onClick={() => removerDividendo(d.id)} 
+                      <button
+                        onClick={() => removerDividendo(d.id)}
                         className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all flex-shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />

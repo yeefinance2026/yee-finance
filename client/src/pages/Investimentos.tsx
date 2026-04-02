@@ -4,12 +4,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
 import { Link } from "wouter";
-import { 
-  ChevronLeft, 
-  Plus, 
-  Trash2, 
-  TrendingUp, 
-  PieChart, 
+import {
+  ChevronLeft,
+  Plus,
+  Trash2,
+  TrendingUp,
+  PieChart,
   Target,
   Lock,
   Zap,
@@ -19,25 +19,26 @@ import {
   BarChart3,
   ChevronRight
 } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
-  DialogTrigger, 
-  DialogFooter 
+  DialogTrigger,
+  DialogFooter
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { assinar } from "@/lib/stripe";
 
 type TipoRendimento = "dividendo" | "juros";
 
@@ -62,7 +63,7 @@ export default function Investimentos() {
   const botaoAddDisabled = !isFounder && totalAtivos >= LIMITE_FREE;
 
   // ========== CÁLCULOS DE PATRIMÔNIO E RENDA ==========
-  
+
   const patrimonioTotal = (state.patrimonioAtual && state.patrimonioAtual > 0)
     ? state.patrimonioAtual
     : state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
@@ -70,8 +71,8 @@ export default function Investimentos() {
   const metaMensal = state.numeroLiberdade || 1;
   const taxaMensalPadrao = 0.006;
   const patrimonioNecessario = metaMensal > 0 ? metaMensal / taxaMensalPadrao : 0;
-  const progressoPatrimonio = patrimonioNecessario > 0 
-    ? Math.min(100, (patrimonioTotal / patrimonioNecessario) * 100) 
+  const progressoPatrimonio = patrimonioNecessario > 0
+    ? Math.min(100, (patrimonioTotal / patrimonioNecessario) * 100)
     : 0;
 
   const rendaJuros = state.investimentos
@@ -84,7 +85,7 @@ export default function Investimentos() {
   const rendaPassivaAtual = rendaJuros + totalDividendosMes;
 
   // ========== ANÁLISES AVANÇADAS (CÁLCULOS REAIS) ==========
-  
+
   // 1. Diversificação
   const totalInvestidoReal = state.investimentos.reduce((acc, inv) => acc + inv.valor, 0);
   const totalRV = state.investimentos
@@ -93,7 +94,7 @@ export default function Investimentos() {
   const totalRF = state.investimentos
     .filter(inv => inv.tipoRendimento === "juros")
     .reduce((acc, inv) => acc + inv.valor, 0);
-  
+
   const percentualRV = totalInvestidoReal > 0 ? ((totalRV / totalInvestidoReal) * 100).toFixed(1) : "0.0";
   const percentualRF = totalInvestidoReal > 0 ? ((totalRF / totalInvestidoReal) * 100).toFixed(1) : "0.0";
 
@@ -102,7 +103,7 @@ export default function Investimentos() {
   const aporteMensal = state.aporteMensal || 0;
   const taxaAnual = state.taxaAnual || 8;
   const taxaMensal = (taxaAnual / 100) / 12;
-  
+
   let patrimonioProjetado = patrimonioTotal;
   for (let i = 0; i < 60; i++) {
     patrimonioProjetado = (patrimonioProjetado + aporteMensal) * (1 + taxaMensal);
@@ -193,13 +194,12 @@ export default function Investimentos() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
-            <button 
+            <button
               disabled={botaoAddDisabled}
-              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${
-                botaoAddDisabled 
-                ? "bg-muted text-muted-foreground cursor-not-allowed" 
+              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${botaoAddDisabled
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
                 : "bg-primary text-primary-foreground shadow-primary/20 hover:scale-105"
-              }`}
+                }`}
             >
               {botaoAddDisabled ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               Adicionar
@@ -225,12 +225,12 @@ export default function Investimentos() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Valor Investido (R$)</Label>
-                  <Input 
-                    type="number" 
-                    value={valor} 
-                    onChange={(e) => setValor(e.target.value)} 
-                    placeholder="Ex: 5000" 
-                    className="rounded-xl py-6" 
+                  <Input
+                    type="number"
+                    value={valor}
+                    onChange={(e) => setValor(e.target.value)}
+                    placeholder="Ex: 5000"
+                    className="rounded-xl py-6"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -256,12 +256,12 @@ export default function Investimentos() {
               {tipoAtivo === "juros" && (
                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
                   <Label className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Taxa Anual (%)</Label>
-                  <Input 
-                    type="number" 
-                    value={taxa} 
-                    onChange={(e) => setTaxa(e.target.value)} 
-                    placeholder="Ex: 8" 
-                    className="rounded-xl py-6" 
+                  <Input
+                    type="number"
+                    value={taxa}
+                    onChange={(e) => setTaxa(e.target.value)}
+                    placeholder="Ex: 8"
+                    className="rounded-xl py-6"
                   />
                 </div>
               )}
@@ -293,7 +293,7 @@ export default function Investimentos() {
                 <PieChart className="w-5 h-5 text-primary" />
               </div>
             </div>
-            
+
             <div className="space-y-2 pt-2 border-t border-border">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -324,15 +324,17 @@ export default function Investimentos() {
                   </p>
                 </div>
               </div>
-              <Link href="/checkout">
-                <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
-                  <Zap className="w-4 h-4" />
-                  ✨ Desbloquear Fundador
-                </button>
-              </Link>
+              <button
+                onClick={assinar}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
+              >
+                <Zap className="w-4 h-4" />
+                ✨ Desbloquear Fundador
+              </button>
             </CardContent>
           </Card>
-        )}
+        )
+        }
 
         {/* 4️⃣ Renda passiva estimada (FREE) */}
         <Card className="border-none bg-card shadow-sm">
@@ -352,7 +354,7 @@ export default function Investimentos() {
         {/* 5️⃣ & 6️⃣ SUA CARTEIRA (Renda Variável e Fixa) */}
         <div className="space-y-6">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sua Carteira</h3>
-          
+
           {state.investimentos.length === 0 ? (
             <Card className="border border-dashed border-border bg-muted/50">
               <CardContent className="p-8 text-center space-y-2">
@@ -383,7 +385,7 @@ export default function Investimentos() {
                           <div className="text-right">
                             <p className="font-bold text-sm">{formatCurrency(inv.valor)}</p>
                           </div>
-                          <button 
+                          <button
                             onClick={() => handleRemover(inv.id)}
                             className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
                           >
@@ -419,7 +421,7 @@ export default function Investimentos() {
                             <p className="text-[10px] text-primary font-bold">{inv.taxaAnual}% a.a.</p>
                             <p className="text-[10px] text-muted-foreground">≈ {formatCurrency((inv.valor * (inv.taxaAnual / 100)) / 12)}/mês</p>
                           </div>
-                          <button 
+                          <button
                             onClick={() => handleRemover(inv.id)}
                             className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
                           >
@@ -449,8 +451,8 @@ export default function Investimentos() {
 
           <div className="space-y-4">
             {/* Card 1: Diversificação */}
-            <button 
-              onClick={handlePremiumFeature} 
+            <button
+              onClick={handlePremiumFeature}
               className={`w-full text-left transition-all ${!isFounder && "cursor-pointer"}`}
             >
               <Card className={`border ${isFounder ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
@@ -467,7 +469,7 @@ export default function Investimentos() {
                     </div>
                     {!isFounder ? <Lock className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-primary" />}
                   </div>
-                  
+
                   <div className={`space-y-3 ${!isFounder && "blur-[2px] select-none opacity-50"}`}>
                     <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest mb-1">
                       <span className="text-secondary">Renda Variável ({percentualRV}%)</span>
@@ -483,8 +485,8 @@ export default function Investimentos() {
             </button>
 
             {/* Card 2: Evolução */}
-            <button 
-              onClick={handlePremiumFeature} 
+            <button
+              onClick={handlePremiumFeature}
               className={`w-full text-left transition-all ${!isFounder && "cursor-pointer"}`}
             >
               <Card className={`border ${isFounder ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
@@ -501,7 +503,7 @@ export default function Investimentos() {
                     </div>
                     {!isFounder ? <Lock className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-primary" />}
                   </div>
-                  
+
                   <div className={`h-16 flex items-end gap-1 px-1 ${!isFounder && "blur-[2px] select-none opacity-50"}`}>
                     {[40, 45, 35, 55, 65, 50, 80, 100].map((h, i) => (
                       <div key={i} className="flex-1 bg-primary/20 rounded-t-sm" style={{ height: `${h}%` }} />
@@ -512,8 +514,8 @@ export default function Investimentos() {
             </button>
 
             {/* Card 3: Projeção */}
-            <button 
-              onClick={handlePremiumFeature} 
+            <button
+              onClick={handlePremiumFeature}
               className={`w-full text-left transition-all ${!isFounder && "cursor-pointer"}`}
             >
               <Card className={`border ${isFounder ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
@@ -530,7 +532,7 @@ export default function Investimentos() {
                     </div>
                     {!isFounder ? <Lock className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-primary" />}
                   </div>
-                  
+
                   <div className={`space-y-1 ${!isFounder && "blur-[2px] select-none opacity-50"}`}>
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Em 5 anos você poderá gerar:</p>
                     <p className="text-xl font-bold text-primary">≈ {formatCurrency(rendaProjetada5Anos)}/mês</p>
@@ -541,7 +543,7 @@ export default function Investimentos() {
             </button>
           </div>
         </div>
-      </main>
-    </div>
+      </main >
+    </div >
   );
 }
