@@ -1,6 +1,8 @@
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
 export default async function handler(req, res) {
     try {
@@ -9,7 +11,7 @@ export default async function handler(req, res) {
             payment_method_types: ["card"],
             line_items: [
                 {
-                    price: "price_1THCkWQYdBKLIhq2Bhsh4srX", // 👈 seu ID
+                    price: "price_1THCkWQYdBKLIhq2Bhsh4srX",
                     quantity: 1,
                 },
             ],
@@ -19,7 +21,7 @@ export default async function handler(req, res) {
 
         res.status(200).json({ url: session.url });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Erro ao criar sessão" });
+        console.error("ERRO STRIPE:", err);
+        res.status(500).json({ error: err.message });
     }
 }
